@@ -1,0 +1,24 @@
+{
+    "type": "number",
+    "title": {
+        "en": "Temperature",
+        "it": "Temperatura"
+    },
+    "desc": {
+        "en": "Wash water temperature setting",
+        "it": "Temperatura dell'acqua di lavaggio"
+    },
+    "getable": true,
+    "setable": false,
+    "uiComponent": "sensor",
+    "icon": "/assets/ic_wash_temperature.svg",
+    "units": {
+        "en": "°C",
+        "it": "°C"
+    },
+    "min": 0,
+    "max": 95,
+    "decimals": 0,
+    "insights": true,
+    "chartType": "stepLine"
+}

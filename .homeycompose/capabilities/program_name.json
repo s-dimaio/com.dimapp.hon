@@ -1,0 +1,15 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Program",
+    "it": "Programma"
+  },
+  "desc": {
+    "en": "Currently selected or running wash program",
+    "it": "Programma di lavaggio selezionato o in esecuzione"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/ic_program_name.svg"
+}

@@ -1,0 +1,15 @@
+{
+    "type": "string",
+    "title": {
+        "en": "Connection",
+        "it": "Connessione"
+    },
+    "desc": {
+        "en": "Washing machine connection status (online/offline)",
+        "it": "Stato di connessione della lavatrice (online/offline)"
+    },
+    "getable": true,
+    "setable": false,
+    "uiComponent": "sensor",
+    "icon": "/assets/ic_connection.svg"
+}

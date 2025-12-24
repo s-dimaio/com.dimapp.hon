@@ -1,0 +1,170 @@
+{
+  "name": {
+    "en": "Washing Machine",
+    "it": "Lavatrice"
+  },
+  "class": "other",
+  "capabilities": [
+    "washer_control",
+    "connection_status",
+    "remote_control_enabled",
+    "washer_job_state",
+    "program_name",
+    "wash_temperature",
+    "spin_speed",
+    "measure_remaining_time",
+    "delay_time"
+  ],
+  "capabilitiesOptions": {
+    "washer_job_state": {
+      "title": {
+        "en": "Status",
+        "it": "Stato Lavaggio"
+      }
+    },
+    "measure_remaining_time": {
+      "title": {
+        "en": "Time Left",
+        "it": "Tempo Rimanente"
+      }
+    },
+    "program_name": {
+      "title": {
+        "en": "Program",
+        "it": "Programma"
+      }
+    }
+  },
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "cloud"
+  ],
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  },
+  "pair": [
+    {
+      "id": "login_credentials",
+      "template": "login_credentials",
+      "options": {
+        "logo": "logo.png",
+        "title": {
+          "en": "Login to hOn",
+          "it": "Accedi a hOn"
+        },
+        "usernameLabel": {
+          "en": "E-mail address",
+          "it": "Indirizzo E-mail"
+        },
+        "usernamePlaceholder": {
+          "en": "your@email.com"
+        },
+        "passwordLabel": {
+          "en": "Password",
+          "it": "Password"
+        },
+        "passwordPlaceholder": {
+          "en": "Password"
+        }
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ],
+  "repair": [
+    {
+      "id": "login_credentials",
+      "template": "login_credentials",
+      "options": {
+        "logo": "logo.png",
+        "title": {
+          "en": "Re-login to hOn",
+          "it": "Riaccedi a hOn"
+        },
+        "usernameLabel": {
+          "en": "E-mail address",
+          "it": "Indirizzo E-mail"
+        },
+        "usernamePlaceholder": {
+          "en": "your@email.com"
+        },
+        "passwordLabel": {
+          "en": "Password",
+          "it": "Password"
+        },
+        "passwordPlaceholder": {
+          "en": "Password"
+        }
+      }
+    }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "Device Information",
+        "it": "Informazioni Dispositivo"
+      },
+      "children": [
+        {
+          "id": "macAddress",
+          "type": "label",
+          "label": {
+            "en": "MAC Address",
+            "it": "Indirizzo MAC"
+          },
+          "value": ""
+        },
+        {
+          "id": "modelName",
+          "type": "label",
+          "label": {
+            "en": "Model",
+            "it": "Modello"
+          },
+          "value": ""
+        },
+        {
+          "id": "serialNumber",
+          "type": "label",
+          "label": {
+            "en": "Serial Number",
+            "it": "Numero Seriale"
+          },
+          "value": ""
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Account",
+        "it": "Account"
+      },
+      "children": [
+        {
+          "id": "email",
+          "type": "label",
+          "label": {
+            "en": "E-mail",
+            "it": "E-mail"
+          },
+          "value": ""
+        }
+      ]
+    }
+  ]
+}

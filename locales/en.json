@@ -1,0 +1,49 @@
+{
+  "pair": {
+    "login_failed": "Login failed. Please check your credentials.",
+    "list_failed": "Failed to retrieve devices. Please try again."
+  },
+  "repair": {
+    "login_failed": "Repair failed. Please check your credentials."
+  },
+  "device": {
+    "not_authenticated": "Not authenticated. Please repair the device.",
+    "not_found": "Device not found in your hOn account.",
+    "init_failed": "Device initialization failed.",
+    "offline": "Device is offline."
+  },
+  "errors": {
+    "device_offline": "The washing machine is offline. Make sure it is powered on and connected.",
+    "remote_control_disabled": "Remote control is not enabled. Please enable it on the washing machine display."
+  },
+  "temperature": {
+    "cold": "Cold"
+  },
+  "spin": {
+    "no_spin": "No spin"
+  },
+  "settings": {
+    "title": "hOn App Settings",
+    "subtitle": "Configure debug logging for JavahOn library",
+    "debug": {
+      "legend": "Debug Options",
+      "logging_title": "Logging",
+      "enable_debug": "Enable debug logging",
+      "debug_description": "When enabled, the JavahOn library will output detailed logs for authentication, API calls, MQTT communication, and appliance operations. Useful for troubleshooting but increases log verbosity. Recommended for development only.",
+      "restart_note": "⚠️ Note: Changes to debug logging will take effect only after restarting the app."
+    },
+    "diagnostics": {
+      "legend": "Diagnostic Data",
+      "download_button": "Download",
+      "description": "Download a complete diagnostic report of all appliances registered on your hOn account. This data includes commands, parameters, attributes, and statistics for each device, which can be used for future development (e.g., adding support for refrigerators, dishwashers, etc.).",
+      "generating": "⏳ Generating diagnostic data... This may take a minute.",
+      "error": "❌ Error:",
+      "ready": "✅ Ready! Found __count__ appliance(s). URL copied to field below:",
+      "copy_button": "📋 Copy",
+      "copy_instruction": "✅ File ready! Copy the URL above and paste it into your browser's address bar to download the diagnostic data.",
+      "copy_success": "✓ URL copied to clipboard",
+      "copy_failed": "✗ Copy failed",
+      "generation_success": "✓ URL ready - copy and paste in browser"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "com.dimapp.hon",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {},
+  "devDependencies": {
+    "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.12"
+  },
+  "dependencies": {
+    "java-hon": "git+https://github.com/s-dimaio/JavahOn.git#v1.4.0"
+  }
+}

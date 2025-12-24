@@ -1,0 +1,24 @@
+{
+    "type": "number",
+    "title": {
+        "en": "Spin Speed",
+        "it": "Velocità Centrifuga"
+    },
+    "desc": {
+        "en": "Spin cycle speed in RPM",
+        "it": "Velocità della centrifuga in giri al minuto"
+    },
+    "getable": true,
+    "setable": false,
+    "uiComponent": "sensor",
+    "icon": "/assets/ic_spin_speed.svg",
+    "units": {
+        "en": "rpm",
+        "it": "rpm"
+    },
+    "min": 0,
+    "max": 1600,
+    "decimals": 0,
+    "insights": true,
+    "chartType": "stepLine"
+}

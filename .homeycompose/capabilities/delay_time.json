@@ -1,0 +1,24 @@
+{
+    "type": "number",
+    "title": {
+        "en": "Delay Start",
+        "it": "Partenza Ritardata"
+    },
+    "desc": {
+        "en": "Delayed start time in minutes",
+        "it": "Tempo di ritardo partenza in minuti"
+    },
+    "getable": true,
+    "setable": false,
+    "uiComponent": "sensor",
+    "icon": "/assets/ic_delay_time.svg",
+    "units": {
+        "en": "min",
+        "it": "min"
+    },
+    "min": 0,
+    "max": 1410,
+    "decimals": 0,
+    "insights": true,
+    "chartType": "stepLine"
+}

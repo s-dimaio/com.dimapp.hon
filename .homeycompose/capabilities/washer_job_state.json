@@ -1,0 +1,15 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Wash State",
+    "it": "Stato Lavaggio"
+  },
+  "desc": {
+    "en": "Current washing machine operational state",
+    "it": "Stato operativo corrente della lavatrice"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/ic_washer_job_state.svg"
+}

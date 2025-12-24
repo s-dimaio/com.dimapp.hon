@@ -1,0 +1,51 @@
+{
+  "pair": {
+    "login_failed": "Accesso fallito. Verifica le tue credenziali.",
+    "list_failed": "Impossibile recuperare i dispositivi. Riprova."
+  },
+  "repair": {
+    "login_failed": "Riparazione fallita. Verifica le tue credenziali."
+  },
+  "device": {
+    "not_authenticated": "Non autenticato. Ripara il dispositivo.",
+    "not_found": "Dispositivo non trovato nel tuo account hOn.",
+    "init_failed": "Inizializzazione dispositivo fallita.",
+    "offline": "Dispositivo offline."
+  },
+  "errors": {
+    "device_offline": "La lavatrice è offline. Assicurati che sia accesa e connessa.",
+    "remote_control_disabled": "Controllo remoto non abilitato. Abilitalo sul display della lavatrice."
+  },
+  "temperature": {
+    "cold": "Freddo"
+  },
+  "spin": {
+    "no_spin": "Senza centrifuga"
+  },
+  "settings": {
+    "title": "Impostazioni app hOn",
+    "subtitle": "Configura il log di debug per la libreria JavahOn",
+    "debug": {
+      "legend": "Opzioni Debug",
+      "logging_title": "Logging",
+      "enable_debug": "Abilita il logging di debug",
+      "debug_description": "Se abilitato, la libreria JavahOn produrrà log dettagliati per autenticazione, chiamate API, comunicazione MQTT e operazioni degli elettrodomestici. Utile per il troubleshooting ma aumenta la verbosità dei log. Consigliato solo per lo sviluppo.",
+      "restart_note": "⚠️ Nota: Le modifiche al logging di debug avranno effetto solo dopo il riavvio dell'app."
+    },
+    "diagnostics": {
+      "legend": "Dati di Diagnostica",
+      "download_button": "Scarica",
+      "description": "Scarica un report diagnostico completo di tutti gli elettrodomestici registrati nel tuo account hOn. Questi dati includono comandi, parametri, attributi e statistiche per ogni dispositivo, che possono essere utilizzati per sviluppi futuri (ad esempio, aggiungere il supporto per frigoriferi, lavastoviglie, ecc.).",
+      "generating": "⏳ Generazione dati di diagnostica in corso... Potrebbe richiedere un minuto.",
+      "error": "❌ Errore:",
+      "error_invalid_response": "Risposta non valida dall'API",
+      "error_no_url": "Nessun URL di download generato",
+      "ready": "✅ Pronto! Trovati __count__ elettrodomestico/i. URL copiato nel campo sottostante:",
+      "copy_button": "📋 Copia",
+      "copy_instruction": "✅ File pronto! Copia l'URL sopra e incollalo nella barra degli indirizzi del tuo browser per scaricare i dati di diagnostica.",
+      "copy_success": "✓ URL copiato negli appunti",
+      "copy_failed": "✗ Copia fallita",
+      "generation_success": "✓ URL pronto - copia e incolla nel browser"
+    }
+  }
+}

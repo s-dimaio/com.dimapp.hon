@@ -1,0 +1,39 @@
+{
+  "id": "com.dimapp.hon",
+  "version": "1.0.0",
+  "compatibility": ">=12.4.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "hOn SmartHome"
+  },
+  "description": {
+    "en": "Your laundry, smarter than ever"
+  },
+  "category": [
+    "appliances"
+  ],
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Simone Di Maio",
+    "email": "simone.dimaio77@gmail.com"
+  },
+  "api": {
+    "getDiagnostics": {
+      "method": "GET",
+      "path": "/diagnostics"
+    },
+    "cleanupDiagnostics": {
+      "method": "DELETE",
+      "path": "/diagnostics"
+    }
+  },
+  "brandColor": "#2186b1"
+}

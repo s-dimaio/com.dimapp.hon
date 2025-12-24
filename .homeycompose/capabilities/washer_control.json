@@ -1,0 +1,44 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "Control",
+    "it": "Controllo"
+  },
+  "desc": {
+    "en": "Control washing machine operations",
+    "it": "Controlla le operazioni della lavatrice"
+  },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "picker",
+  "values": [
+    {
+      "id": "idle",
+      "title": {
+        "en": "Idle",
+        "it": "Inattivo"
+      }
+    },
+    {
+      "id": "pause",
+      "title": {
+        "en": "Pause",
+        "it": "Pausa"
+      }
+    },
+    {
+      "id": "resume",
+      "title": {
+        "en": "Resume",
+        "it": "Riprendi"
+      }
+    },
+    {
+      "id": "stop",
+      "title": {
+        "en": "Stop",
+        "it": "Interrompi"
+      }
+    }
+  ]
+}

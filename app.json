@@ -1,0 +1,613 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "com.dimapp.hon",
+  "version": "1.0.0",
+  "compatibility": ">=12.4.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "hOn SmartHome"
+  },
+  "description": {
+    "en": "Adds support fon hOn devices"
+  },
+  "category": [
+    "appliances"
+  ],
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Simone Di Maio",
+    "email": "simone.dimaio77@gmail.com"
+  },
+  "api": {
+    "getDiagnostics": {
+      "method": "GET",
+      "path": "/diagnostics"
+    },
+    "cleanupDiagnostics": {
+      "method": "DELETE",
+      "path": "/diagnostics"
+    }
+  },
+  "brandColor": "#2186b1",
+  "flow": {
+    "triggers": [
+      {
+        "id": "wash_started",
+        "title": {
+          "en": "Wash cycle started",
+          "it": "Ciclo di lavaggio iniziato"
+        },
+        "hint": {
+          "en": "When the washing machine starts a wash cycle",
+          "it": "Quando la lavatrice inizia un ciclo di lavaggio"
+        },
+        "tokens": [
+          {
+            "name": "program",
+            "type": "string",
+            "title": {
+              "en": "Program",
+              "it": "Programma"
+            }
+          },
+          {
+            "name": "temperature",
+            "type": "number",
+            "title": {
+              "en": "Temperature",
+              "it": "Temperatura"
+            }
+          },
+          {
+            "name": "spin_speed",
+            "type": "number",
+            "title": {
+              "en": "Spin speed",
+              "it": "Velocità centrifuga"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=washing-machine"
+          }
+        ]
+      },
+      {
+        "id": "wash_finished",
+        "title": {
+          "en": "Wash cycle finished",
+          "it": "Ciclo di lavaggio terminato"
+        },
+        "hint": {
+          "en": "When the washing machine finishes a wash cycle",
+          "it": "Quando la lavatrice termina un ciclo di lavaggio"
+        },
+        "tokens": [
+          {
+            "name": "program",
+            "type": "string",
+            "title": {
+              "en": "Program",
+              "it": "Programma"
+            }
+          },
+          {
+            "name": "duration",
+            "type": "number",
+            "title": {
+              "en": "Duration (minutes)",
+              "it": "Durata (minuti)"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=washing-machine"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "start_program",
+        "title": {
+          "en": "Start wash program",
+          "it": "Avvia programma"
+        },
+        "titleFormatted": {
+          "en": "Start [[program]] at [[temperature]]°C with [[spin_speed]] spin",
+          "it": "Avvia [[program]] a [[temperature]]°C con centrifuga [[spin_speed]]"
+        },
+        "hint": {
+          "en": "Start a washing program with specified settings",
+          "it": "Avvia un programma di lavaggio con le impostazioni specificate"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=washing-machine"
+          },
+          {
+            "type": "autocomplete",
+            "name": "program",
+            "title": {
+              "en": "Program",
+              "it": "Programma"
+            },
+            "placeholder": {
+              "en": "Select a program",
+              "it": "Seleziona un programma"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "temperature",
+            "title": {
+              "en": "Temperature",
+              "it": "Temperatura"
+            },
+            "placeholder": {
+              "en": "Select temperature",
+              "it": "Seleziona temperatura"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "spin_speed",
+            "title": {
+              "en": "Spin speed",
+              "it": "Velocità centrifuga"
+            },
+            "placeholder": {
+              "en": "Select spin speed",
+              "it": "Seleziona centrifuga"
+            }
+          }
+        ]
+      },
+      {
+        "id": "pause_program",
+        "title": {
+          "en": "Pause wash program",
+          "it": "Metti in pausa"
+        },
+        "hint": {
+          "en": "Pause the currently running wash program",
+          "it": "Metti in pausa il programma in corso"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=washing-machine"
+          }
+        ]
+      },
+      {
+        "id": "resume_program",
+        "title": {
+          "en": "Resume wash program",
+          "it": "Riprendi programma"
+        },
+        "hint": {
+          "en": "Resume the paused wash program",
+          "it": "Riprendi il programma in pausa"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=washing-machine"
+          }
+        ]
+      },
+      {
+        "id": "stop_program",
+        "title": {
+          "en": "Stop wash program",
+          "it": "Ferma programma"
+        },
+        "hint": {
+          "en": "Stop the currently running wash program",
+          "it": "Ferma il programma in corso"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=washing-machine"
+          }
+        ]
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "name": {
+        "en": "Washing Machine",
+        "it": "Lavatrice"
+      },
+      "class": "other",
+      "capabilities": [
+        "washer_control",
+        "connection_status",
+        "remote_control_enabled",
+        "washer_job_state",
+        "program_name",
+        "wash_temperature",
+        "spin_speed",
+        "measure_remaining_time",
+        "delay_time"
+      ],
+      "capabilitiesOptions": {
+        "washer_job_state": {
+          "title": {
+            "en": "Status",
+            "it": "Stato Lavaggio"
+          }
+        },
+        "measure_remaining_time": {
+          "title": {
+            "en": "Time Left",
+            "it": "Tempo Rimanente"
+          }
+        },
+        "program_name": {
+          "title": {
+            "en": "Program",
+            "it": "Programma"
+          }
+        }
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "cloud"
+      ],
+      "images": {
+        "small": "/drivers/washing-machine/assets/images/small.png",
+        "large": "/drivers/washing-machine/assets/images/large.png",
+        "xlarge": "/drivers/washing-machine/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "login_credentials",
+          "template": "login_credentials",
+          "options": {
+            "logo": "logo.png",
+            "title": {
+              "en": "Login to hOn",
+              "it": "Accedi a hOn"
+            },
+            "usernameLabel": {
+              "en": "E-mail address",
+              "it": "Indirizzo E-mail"
+            },
+            "usernamePlaceholder": {
+              "en": "your@email.com"
+            },
+            "passwordLabel": {
+              "en": "Password",
+              "it": "Password"
+            },
+            "passwordPlaceholder": {
+              "en": "Password"
+            }
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "login_credentials",
+          "template": "login_credentials",
+          "options": {
+            "logo": "logo.png",
+            "title": {
+              "en": "Re-login to hOn",
+              "it": "Riaccedi a hOn"
+            },
+            "usernameLabel": {
+              "en": "E-mail address",
+              "it": "Indirizzo E-mail"
+            },
+            "usernamePlaceholder": {
+              "en": "your@email.com"
+            },
+            "passwordLabel": {
+              "en": "Password",
+              "it": "Password"
+            },
+            "passwordPlaceholder": {
+              "en": "Password"
+            }
+          }
+        }
+      ],
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Device Information",
+            "it": "Informazioni Dispositivo"
+          },
+          "children": [
+            {
+              "id": "macAddress",
+              "type": "label",
+              "label": {
+                "en": "MAC Address",
+                "it": "Indirizzo MAC"
+              },
+              "value": ""
+            },
+            {
+              "id": "modelName",
+              "type": "label",
+              "label": {
+                "en": "Model",
+                "it": "Modello"
+              },
+              "value": ""
+            },
+            {
+              "id": "serialNumber",
+              "type": "label",
+              "label": {
+                "en": "Serial Number",
+                "it": "Numero Seriale"
+              },
+              "value": ""
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Account",
+            "it": "Account"
+          },
+          "children": [
+            {
+              "id": "email",
+              "type": "label",
+              "label": {
+                "en": "E-mail",
+                "it": "E-mail"
+              },
+              "value": ""
+            }
+          ]
+        }
+      ],
+      "id": "washing-machine"
+    }
+  ],
+  "capabilities": {
+    "connection_status": {
+      "type": "string",
+      "title": {
+        "en": "Connection",
+        "it": "Connessione"
+      },
+      "desc": {
+        "en": "Washing machine connection status (online/offline)",
+        "it": "Stato di connessione della lavatrice (online/offline)"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/ic_connection.svg"
+    },
+    "delay_time": {
+      "type": "number",
+      "title": {
+        "en": "Delay Start",
+        "it": "Partenza Ritardata"
+      },
+      "desc": {
+        "en": "Delayed start time in minutes",
+        "it": "Tempo di ritardo partenza in minuti"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/ic_delay_time.svg",
+      "units": {
+        "en": "min",
+        "it": "min"
+      },
+      "min": 0,
+      "max": 1410,
+      "decimals": 0,
+      "insights": true,
+      "chartType": "stepLine"
+    },
+    "measure_remaining_time": {
+      "type": "number",
+      "title": {
+        "en": "Time Remaining",
+        "it": "Tempo Rimanente"
+      },
+      "desc": {
+        "en": "Remaining time until wash cycle completion",
+        "it": "Tempo rimanente al completamento del ciclo"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/ic_remaining_time.svg",
+      "units": {
+        "en": "min",
+        "it": "min"
+      },
+      "min": 0,
+      "max": 999,
+      "decimals": 0,
+      "insights": true,
+      "chartType": "stepLine"
+    },
+    "program_name": {
+      "type": "string",
+      "title": {
+        "en": "Program",
+        "it": "Programma"
+      },
+      "desc": {
+        "en": "Currently selected or running wash program",
+        "it": "Programma di lavaggio selezionato o in esecuzione"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/ic_program_name.svg"
+    },
+    "remote_control_enabled": {
+      "type": "boolean",
+      "title": {
+        "en": "Remote Control",
+        "it": "Controllo Remoto"
+      },
+      "desc": {
+        "en": "Remote control is enabled on the washing machine",
+        "it": "Il controllo remoto è abilitato sulla lavatrice"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/ic_remote_control.svg"
+    },
+    "spin_speed": {
+      "type": "number",
+      "title": {
+        "en": "Spin Speed",
+        "it": "Velocità Centrifuga"
+      },
+      "desc": {
+        "en": "Spin cycle speed in RPM",
+        "it": "Velocità della centrifuga in giri al minuto"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/ic_spin_speed.svg",
+      "units": {
+        "en": "rpm",
+        "it": "rpm"
+      },
+      "min": 0,
+      "max": 1600,
+      "decimals": 0,
+      "insights": true,
+      "chartType": "stepLine"
+    },
+    "wash_temperature": {
+      "type": "number",
+      "title": {
+        "en": "Temperature",
+        "it": "Temperatura"
+      },
+      "desc": {
+        "en": "Wash water temperature setting",
+        "it": "Temperatura dell'acqua di lavaggio"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/ic_wash_temperature.svg",
+      "units": {
+        "en": "°C",
+        "it": "°C"
+      },
+      "min": 0,
+      "max": 95,
+      "decimals": 0,
+      "insights": true,
+      "chartType": "stepLine"
+    },
+    "washer_control": {
+      "type": "enum",
+      "title": {
+        "en": "Control",
+        "it": "Controllo"
+      },
+      "desc": {
+        "en": "Control washing machine operations",
+        "it": "Controlla le operazioni della lavatrice"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "values": [
+        {
+          "id": "idle",
+          "title": {
+            "en": "Idle",
+            "it": "Inattivo"
+          }
+        },
+        {
+          "id": "pause",
+          "title": {
+            "en": "Pause",
+            "it": "Pausa"
+          }
+        },
+        {
+          "id": "resume",
+          "title": {
+            "en": "Resume",
+            "it": "Riprendi"
+          }
+        },
+        {
+          "id": "stop",
+          "title": {
+            "en": "Stop",
+            "it": "Interrompi"
+          }
+        }
+      ]
+    },
+    "washer_job_state": {
+      "type": "string",
+      "title": {
+        "en": "Wash State",
+        "it": "Stato Lavaggio"
+      },
+      "desc": {
+        "en": "Current washing machine operational state",
+        "it": "Stato operativo corrente della lavatrice"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/ic_washer_job_state.svg"
+    }
+  }
+}

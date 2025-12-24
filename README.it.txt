@@ -1,0 +1,3 @@
+Trasforma la tua routine di bucato con il controllo senza soluzione di continuità delle tue lavatrici connesse Haier hOn. Monitora i cicli di lavaggio in tempo reale, avvia programmi da remoto e crea automazioni intelligenti che si adattano al tuo stile di vita. Che tu voglia far funzionare la lavatrice quando i prezzi dell'energia sono bassi o ricevere una notifica nel momento in cui il bucato è pronto, hOn SmartHome lo rende semplice.
+
+Sperimenta la comodità di avere la tua lavatrice completamente integrata nella tua smart home Homey, con aggiornamenti di stato istantanei e potente integrazione Flow card per infinite possibilità di automazione. Attualmente supporta lavatrici, con altri tipi di elettrodomestici in arrivo prossimamente.

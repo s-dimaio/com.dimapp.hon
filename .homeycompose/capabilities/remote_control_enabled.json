@@ -1,0 +1,15 @@
+{
+    "type": "boolean",
+    "title": {
+        "en": "Remote Control",
+        "it": "Controllo Remoto"
+    },
+    "desc": {
+        "en": "Remote control is enabled on the washing machine",
+        "it": "Il controllo remoto è abilitato sulla lavatrice"
+    },
+    "getable": true,
+    "setable": false,
+    "uiComponent": "sensor",
+    "icon": "/assets/ic_remote_control.svg"
+}

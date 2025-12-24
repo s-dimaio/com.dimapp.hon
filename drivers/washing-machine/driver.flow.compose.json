@@ -1,0 +1,158 @@
+{
+  "triggers": [
+    {
+      "id": "wash_started",
+      "title": {
+        "en": "Wash cycle started",
+        "it": "Ciclo di lavaggio iniziato"
+      },
+      "hint": {
+        "en": "When the washing machine starts a wash cycle",
+        "it": "Quando la lavatrice inizia un ciclo di lavaggio"
+      },
+      "tokens": [
+        {
+          "name": "program",
+          "type": "string",
+          "title": {
+            "en": "Program",
+            "it": "Programma"
+          }
+        },
+        {
+          "name": "temperature",
+          "type": "number",
+          "title": {
+            "en": "Temperature",
+            "it": "Temperatura"
+          }
+        },
+        {
+          "name": "spin_speed",
+          "type": "number",
+          "title": {
+            "en": "Spin speed",
+            "it": "Velocità centrifuga"
+          }
+        }
+      ]
+    },
+    {
+      "id": "wash_finished",
+      "title": {
+        "en": "Wash cycle finished",
+        "it": "Ciclo di lavaggio terminato"
+      },
+      "hint": {
+        "en": "When the washing machine finishes a wash cycle",
+        "it": "Quando la lavatrice termina un ciclo di lavaggio"
+      },
+      "tokens": [
+        {
+          "name": "program",
+          "type": "string",
+          "title": {
+            "en": "Program",
+            "it": "Programma"
+          }
+        },
+        {
+          "name": "duration",
+          "type": "number",
+          "title": {
+            "en": "Duration (minutes)",
+            "it": "Durata (minuti)"
+          }
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "start_program",
+      "title": {
+        "en": "Start wash program",
+        "it": "Avvia programma"
+      },
+      "titleFormatted": {
+        "en": "Start [[program]] at [[temperature]]°C with [[spin_speed]] spin",
+        "it": "Avvia [[program]] a [[temperature]]°C con centrifuga [[spin_speed]]"
+      },
+      "hint": {
+        "en": "Start a washing program with specified settings",
+        "it": "Avvia un programma di lavaggio con le impostazioni specificate"
+      },
+      "args": [
+        {
+          "type": "autocomplete",
+          "name": "program",
+          "title": {
+            "en": "Program",
+            "it": "Programma"
+          },
+          "placeholder": {
+            "en": "Select a program",
+            "it": "Seleziona un programma"
+          }
+        },
+        {
+          "type": "autocomplete",
+          "name": "temperature",
+          "title": {
+            "en": "Temperature",
+            "it": "Temperatura"
+          },
+          "placeholder": {
+            "en": "Select temperature",
+            "it": "Seleziona temperatura"
+          }
+        },
+        {
+          "type": "autocomplete",
+          "name": "spin_speed",
+          "title": {
+            "en": "Spin speed",
+            "it": "Velocità centrifuga"
+          },
+          "placeholder": {
+            "en": "Select spin speed",
+            "it": "Seleziona centrifuga"
+          }
+        }
+      ]
+    },
+    {
+      "id": "pause_program",
+      "title": {
+        "en": "Pause wash program",
+        "it": "Metti in pausa"
+      },
+      "hint": {
+        "en": "Pause the currently running wash program",
+        "it": "Metti in pausa il programma in corso"
+      }
+    },
+    {
+      "id": "resume_program",
+      "title": {
+        "en": "Resume wash program",
+        "it": "Riprendi programma"
+      },
+      "hint": {
+        "en": "Resume the paused wash program",
+        "it": "Riprendi il programma in pausa"
+      }
+    },
+    {
+      "id": "stop_program",
+      "title": {
+        "en": "Stop wash program",
+        "it": "Ferma programma"
+      },
+      "hint": {
+        "en": "Stop the currently running wash program",
+        "it": "Ferma il programma in corso"
+      }
+    }
+  ]
+}

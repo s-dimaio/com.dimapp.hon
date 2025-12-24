@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hOn App Settings</title>
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      background-color: #28a745;
+      color: white;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="homey-header">
+    <h1 class="homey-title" data-i18n="settings.title"></h1>
+    <p class="homey-subtitle" data-i18n="settings.subtitle"></p>
+  </header>
+
+  <form class="homey-form">
+    <fieldset class="homey-form-fieldset">
+      <legend class="homey-form-legend" data-i18n="settings.debug.legend"></legend>
+
+      <div class="homey-form-group">
+        <fieldset class="homey-form-checkbox-set">
+          <legend class="homey-form-checkbox-set-title" data-i18n="settings.debug.logging_title"></legend>
+
+          <label class="homey-form-checkbox">
+            <input class="homey-form-checkbox-input" type="checkbox" id="debug-enabled" name="debug-enabled" />
+            <span class="homey-form-checkbox-checkmark"></span>
+            <span class="homey-form-checkbox-text" data-i18n="settings.debug.enable_debug"></span>
+          </label>
+        </fieldset>
+        <p style="margin-top: 8px; font-size: 14px; color: #666; line-height: 1.5;" data-i18n="settings.debug.debug_description"></p>
+
+        <div
+          style="margin-top: 16px; padding: 16px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">
+          <p style="margin: 0; font-size: 14px; color: #856404; line-height: 1.5;" data-i18n="settings.debug.restart_note"></p>
+        </div>
+      </div>
+
+    </fieldset>
+
+    <fieldset class="homey-form-fieldset" style="margin-top: 32px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <legend class="homey-form-legend" style="margin: 0;" data-i18n="settings.diagnostics.legend"></legend>
+        <button type="button" id="download-diagnostics" class="homey-button-secondary-shadow" style="margin: 0;" data-i18n="settings.diagnostics.download_button"></button>
+      </div>
+
+      <div class="homey-form-group">
+        <p style="margin-bottom: 16px; font-size: 14px; color: #666; line-height: 1.5;" data-i18n="settings.diagnostics.description"></p>
+
+        <div id="diagnostics-status" style="margin-top: 12px; font-size: 14px; display: none;"></div>
+        <div id="diagnostics-link" style="margin-top: 12px; display: none;">
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <input type="text" id="diagnostics-url" readonly style="flex: 1; padding: 8px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5;" />
+            <button type="button" id="copy-url-btn" class="homey-button-secondary-shadow" style="white-space: nowrap;">
+              📋 Copy
+            </button>
+          </div>
+          <p style="margin-top: 12px; font-size: 14px; color: #666; line-height: 1.5;">
+            ✅ File ready! Copy the URL above and paste it into your browser's address bar to download the diagnostic data.
+          </p>
+        </div>
+      </div>
+    </fieldset>
+  </form>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast">✓ Saved</div>
+
+  <script type="text/javascript">
+    function onHomeyReady(homeyInstance) {
+      const Homey = homeyInstance;
+
+      // ============================================================
+      // AUTO-CLEANUP: Delete old diagnostic files on page load
+      // ============================================================
+
+      // console.log('🧹 Auto-cleaning diagnostic files...');
+      // Homey.api('DELETE', '/diagnostics', null, function(err, result) {
+      //   if (err) {
+      //     console.warn('⚠️ Cleanup warning:', err.message);
+      //     return;
+      //   }
+
+      //   console.log('✅ Cleanup completed:', result.message);
+      //   console.log(`   Deleted: ${result.deleted} file(s)`);
+      // });
+
+      // ============================================================
+      // DEBUG CHECKBOX
+      // ============================================================
+
+      // Get checkbox element
+      const checkbox = document.getElementById('debug-enabled');
+
+      // Load current settings - use get with callback for async
+      Homey.get('debugEnabled', function (err, value) {
+        if (err) {
+          console.error('Error loading debugEnabled setting:', err);
+          checkbox.checked = false;
+          return;
+        }
+
+        console.log('Loaded debugEnabled setting:', value, typeof value);
+
+        // Set checkbox state based on saved value
+        if (value === true || value === 'true') {
+          checkbox.checked = true;
+        } else {
+          checkbox.checked = false;
+        }
+      });
+
+      // Auto-save on checkbox change
+      checkbox.addEventListener('change', async function () {
+        try {
+          // Get checkbox value
+          const isDebugEnabled = checkbox.checked;
+
+          console.log('Saving debugEnabled:', isDebugEnabled);
+
+          // Save setting
+          Homey.set('debugEnabled', isDebugEnabled, function (err) {
+            if (err) {
+              console.error('Failed to save settings:', err);
+              alert('Error saving settings: ' + err.message);
+              return;
+            }
+
+            console.log('Debug setting saved successfully:', isDebugEnabled);
+
+            // Show toast notification
+            showToast('✓ Saved');
+          });
+
+        } catch (error) {
+          console.error('Failed to save settings:', error);
+          alert('Error saving settings: ' + error.message);
+        }
+      });
+
+      // ============================================================
+      // DIAGNOSTICS DOWNLOAD
+      // ============================================================
+
+      const downloadButton = document.getElementById('download-diagnostics');
+      const diagnosticsStatus = document.getElementById('diagnostics-status');
+      const diagnosticsLinkDiv = document.getElementById('diagnostics-link');
+      const diagnosticsUrlInput = document.getElementById('diagnostics-url');
+      const copyUrlBtn = document.getElementById('copy-url-btn');
+
+      downloadButton.addEventListener('click', function (e) {
+        try {
+          console.log('Downloading diagnostic data...');
+          
+          // Hide link from previous download
+          diagnosticsLinkDiv.style.display = 'none';
+          
+          // Show loading state
+          downloadButton.disabled = true;
+          diagnosticsStatus.textContent = Homey.__('settings.diagnostics.generating');
+          diagnosticsStatus.style.color = '#666';
+          diagnosticsStatus.style.display = 'block';
+
+          // Call API to generate diagnostics
+          Homey.api('GET', '/diagnostics', undefined, (err, result) => {
+
+            console.log('=== API Callback Fired ===');
+            console.log('Error:', err);
+            console.log('Result type:', typeof result);
+
+            if (err) {
+              console.error('Failed to generate diagnostics:', err);
+              diagnosticsStatus.textContent = Homey.__('settings.diagnostics.error') + ' ' + (err.message || err);
+              diagnosticsStatus.style.color = '#d32f2f';
+              downloadButton.disabled = false;
+              return;
+            }
+
+            // Check if result is valid (should be an object with diagnostic data)
+            if (!result || typeof result !== 'object') {
+              console.error('Invalid result:', result, typeof result);
+              diagnosticsStatus.textContent = Homey.__('settings.diagnostics.error') + ' ' + Homey.__('settings.diagnostics.error_invalid_response');
+              diagnosticsStatus.style.color = '#d32f2f';
+              downloadButton.disabled = false;
+              return;
+            }
+
+            console.log('API returned successfully');
+
+            // Show download URL
+            if (result.url) {
+              const urlInput = document.getElementById('diagnostics-url');
+              urlInput.value = result.url;
+              
+              diagnosticsLinkDiv.style.display = 'block';
+              
+              const count = result.data?.applianceCount || 0;
+              const readyMsg = Homey.__('settings.diagnostics.ready').replace('__count__', count);
+              diagnosticsStatus.textContent = readyMsg;
+              diagnosticsStatus.style.color = '#388e3c';
+              
+              showToast(Homey.__('settings.diagnostics.generation_success'));
+            } else {
+              diagnosticsStatus.textContent = Homey.__('settings.diagnostics.error') + ' ' + Homey.__('settings.diagnostics.error_no_url');
+              diagnosticsStatus.style.color = '#d32f2f';
+            }
+
+            // Reset button
+            downloadButton.disabled = false;
+          });
+
+        } catch (error) {
+          console.error('Failed to download diagnostics:', error);
+          diagnosticsStatus.textContent = Homey.__('settings.diagnostics.error') + ' ' + error.message;
+          diagnosticsStatus.style.color = '#d32f2f';
+          downloadButton.disabled = false;
+        }
+      });
+
+      // Copy URL button handler
+      copyUrlBtn.addEventListener('click', function () {
+        try {
+          if (diagnosticsUrlInput.value) {
+            diagnosticsUrlInput.select();
+            document.execCommand('copy');
+            showToast(Homey.__('settings.diagnostics.copy_success'));
+          }
+        } catch (error) {
+          console.error('Failed to copy URL:', error);
+          showToast(Homey.__('settings.diagnostics.copy_failed'));
+        }
+      });
+
+      // ============================================================
+      // UTILITIES
+      // ============================================================
+
+      // Toast notification function
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 2000);
+      }
+
+      // Tell Homey we're ready
+      Homey.ready();
+    }
+  </script>
+
+</body>
+
+</html>
