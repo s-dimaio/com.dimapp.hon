@@ -12,6 +12,7 @@ module.exports = class WashingMachineDriver extends Homey.Driver {
    * onInit is called when the driver is initialized.
    */
   async onInit() {
+    this.log('onInit - Driver - WashingMachineDriver initialized');
   }
 
   /**

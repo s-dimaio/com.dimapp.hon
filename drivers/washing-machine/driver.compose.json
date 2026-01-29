@@ -3,7 +3,7 @@
     "en": "Washing Machine",
     "it": "Lavatrice"
   },
-  "class": "other",
+  "class": "washer",
   "capabilities": [
     "washer_control",
     "connection_status",

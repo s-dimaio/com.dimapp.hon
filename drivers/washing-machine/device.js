@@ -13,21 +13,21 @@ module.exports = class WashingMachineDevice extends Homey.Device {
   // MQTT UPDATES & HANDLERS
   // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-   * Process MQTT message and update device capabilities
-   * Updates appliance attributes and marks device as online
-   * @private
-   * @async
-   * @param {Object} payload - MQTT message payload with parameters field
-   * @param {Object} payload.parameters - Key-value pairs of appliance parameters
-   * @returns {Promise<void>}
-   * @throws {Error} If parameter update fails
-   * @example
-   * // Process MQTT message from broker
-   * await this._handleMqttUpdate({
-   *   parameters: { machMode: '2', prPhase: '4', remainingTimeMM: 45 }
-   * });
-   */
+  /**
+ * Process MQTT message and update device capabilities
+ * Updates appliance attributes and marks device as online
+ * @private
+ * @async
+ * @param {Object} payload - MQTT message payload with parameters field
+ * @param {Object} payload.parameters - Key-value pairs of appliance parameters
+ * @returns {Promise<void>}
+ * @throws {Error} If parameter update fails
+ * @example
+ * // Process MQTT message from broker
+ * await this._handleMqttUpdate({
+ *   parameters: { machMode: '2', prPhase: '4', remainingTimeMM: 45 }
+ * });
+ */
   async _handleMqttUpdate(payload) {
     try {
       if (!payload || !payload.parameters) return;
@@ -41,20 +41,31 @@ module.exports = class WashingMachineDevice extends Homey.Device {
             this._appliance.attributes.parameters[key].value = value;
           }
         }
-        
+
         // If we receive an MQTT message, the appliance is online
         // Update connection status
         const wasOffline = !this._appliance.connection;
         this._appliance.connection = true;
-        
+
         if (wasOffline) {
           this.log('📡 Device came online (MQTT message received)');
           await this.setCapabilityValue('connection_status', 'online').catch(this.error);
         }
-        
+
         // Update state in JavahOn library (triggers events: programStarted, programFinished, etc.)
         if (this._appliance.extra && this._appliance.extra.updateState) {
-          this._appliance.extra.updateState(params);
+          // Only call updateState if machMode or prPhase changed
+          // MQTT sends only changed parameters, so we avoid unnecessary processing
+          if (params.machMode !== undefined || params.prPhase !== undefined) {
+            // Debug: Log parameters being passed to updateState
+            const machModeValue = typeof params.machMode === 'object' ? params.machMode?.value : params.machMode;
+            const prPhaseValue = typeof params.prPhase === 'object' ? params.prPhase?.value : params.prPhase;
+            this.log(`🔄 Calling updateState: machMode=${machModeValue}, prPhase=${prPhaseValue}`);
+
+            this._appliance.extra.updateState(params);
+          }
+        } else {
+          this.log('⚠️ WARNING: _appliance.extra or updateState not available');
         }
       }
 
@@ -89,23 +100,28 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    * });
    */
   async _updateCapabilitiesFromParams(params = {}) {
+    this.log(`🔍 MQTT Params received:`, JSON.stringify(params, null, 2));
+
     try {
       // Get machMode from params or attributes
-      let machMode = params.machMode !== undefined ? String(params.machMode) : null;
+      // Handle both HonParameter objects {value: 'x'} and simple values
+      let machMode = params.machMode !== undefined
+        ? String(typeof params.machMode === 'object' && params.machMode.value !== undefined ? params.machMode.value : params.machMode)
+        : null;
       if (!machMode && this._appliance?.attributes?.parameters?.machMode) {
         const storedMode = this._appliance.attributes.parameters.machMode;
         machMode = String(typeof storedMode === 'object' ? storedMode.value : storedMode);
       }
-      
+
       // Determine if machine is idle/ready (not running a program)
       // NOTE: machMode 7 is excluded - it represents "finished" state and should keep program info
       const isIdle = machMode && ['0', '1'].includes(machMode);
-      
+
       // Check if we're receiving program start parameters
       // These indicate a program is about to start or is starting
-      const hasProgramParams = params.prCode !== undefined || params.temp !== undefined || 
-                               params.spinSpeed !== undefined || params.prPosition !== undefined;
-      
+      const hasProgramParams = params.prCode !== undefined || params.temp !== undefined ||
+        params.spinSpeed !== undefined || params.prPosition !== undefined;
+
       // If machine is idle AND we're NOT receiving program parameters, reset values
       // This prevents resetting when a program is starting (params arrive before machMode changes)
       if (isIdle && !hasProgramParams) {
@@ -114,28 +130,31 @@ module.exports = class WashingMachineDevice extends Homey.Device {
         await this.setCapabilityValue('wash_temperature', 0).catch(this.error);
         await this.setCapabilityValue('spin_speed', 0).catch(this.error);
       }
-      
+
       // Get prPhase from params or attributes
-      let prPhase = params.prPhase !== undefined ? String(params.prPhase) : null;
+      // Handle both HonParameter objects {value: 'x'} and simple values
+      let prPhase = params.prPhase !== undefined
+        ? String(typeof params.prPhase === 'object' && params.prPhase.value !== undefined ? params.prPhase.value : params.prPhase)
+        : null;
       if (!prPhase && this._appliance?.attributes?.parameters?.prPhase) {
         const storedPhase = this._appliance.attributes.parameters.prPhase;
         prPhase = String(typeof storedPhase === 'object' ? storedPhase.value : storedPhase);
       }
-      
+
       // Update state if we have machMode
       if (machMode) {
         let stateText = '';
-        
+
         this.log(`🔍 STATE CHECK - machMode=${machMode}, prPhase=${prPhase}`);
-        
+
         // Get localized state text from hOn API translations
         stateText = this._getLocalizedState(parseInt(machMode), parseInt(prPhase || 0));
-        
+
         if (params.machMode !== undefined || params.prPhase !== undefined) {
           this.log(`State: ${stateText} (machMode=${machMode}, prPhase=${prPhase})`);
         }
         await this.setCapabilityValue('washer_job_state', stateText).catch(this.error);
-        
+
         // Update washer_control to show it's always ready for commands
         await this.setCapabilityValue('washer_control', 'idle').catch(this.error);
       }
@@ -148,62 +167,90 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
       // Update program name if we have program information
       // Allow updates even when isIdle if we're receiving program params (program starting)
-      if (params.prStr !== undefined || params.prCode !== undefined || params.programName !== undefined) {
+      if (params.prStr !== undefined || params.prCode !== undefined || params.programName !== undefined || params.prPosition !== undefined) {
         let programName = params.prStr || params.programName;
-        const prCode = params.prCode !== undefined ? String(params.prCode) : null;
-        const prPosition = params.prPosition !== undefined ? String(params.prPosition) : null;
-        
-        // If programName from attributes is available, use it (most accurate)
+
+        // Extract prCode and prPosition handling both HonParameter objects {value: 'x'} and simple values
+        const prCode = params.prCode !== undefined
+          ? String(typeof params.prCode === 'object' && params.prCode.value !== undefined ? params.prCode.value : params.prCode)
+          : null;
+        const prPosition = params.prPosition !== undefined
+          ? String(typeof params.prPosition === 'object' && params.prPosition.value !== undefined ? params.prPosition.value : params.prPosition)
+          : null;
+
+        this.log(`🔍 PROGRAM LOOKUP - prCode=${prCode}, prPosition=${prPosition}, programName=${programName || 'not provided'}`);
+
+        // If programName from MQTT params is available, use it (most accurate)
         if (params.programName) {
           programName = this._getLocalizedProgramName(params.programName);
-          this.log(`📋 Program: "${programName}"`);
+          this.log(`📋 Program from MQTT programName: "${programName}"`);
         }
-        // If prStr is provided, save it for future use and format it
+        // If prStr is provided, format it
         else if (params.prStr) {
-          await this.setStoreValue('lastProgramName', params.prStr);
           programName = this._getLocalizedProgramName(params.prStr);
-          this.log(`📋 Program: "${programName}"`);
-        } 
+          this.log(`📋 Program from MQTT prStr: "${programName}"`);
+        }
+        // Check if programName is in loaded attributes (initial state from API)
+        else if (!programName && this._appliance?.attributes?.parameters?.programName) {
+          const attrProgramName = this._appliance.attributes.parameters.programName;
+          const rawName = typeof attrProgramName === 'object' ? attrProgramName.value : attrProgramName;
+          if (rawName) {
+            programName = this._getLocalizedProgramName(rawName);
+            this.log(`📋 Program from attributes: "${programName}" (raw: ${rawName})`);
+          }
+        }
         // Try to find program by prCode + prPosition combination using library
-        else if (prCode !== null && prPosition !== null && this._appliance?.extra) {
+        if (!programName && prCode !== null && prPosition !== null && this._appliance?.extra) {
+          // Check if remote control is enabled
+          const remoteEnabled = params.remoteCtrValid === 1 || params.remoteCtrValid === '1';
+
           const foundProgram = this._appliance.extra.findProgramByCode(
-            parseInt(prCode), 
-            prPosition ? parseInt(prPosition) : null
+            parseInt(prCode),
+            parseInt(prPosition),
+            remoteEnabled
           );
-          
+
           if (foundProgram) {
-            programName = foundProgram.name;
-            this.log(`📋 Program: "${programName}"`);
+            // ✅ Use localized name from hOn API translations
+            programName = this._getLocalizedProgramName(foundProgram.id);
+            this.log(`📋 Program found by lookup: "${programName}" (id: ${foundProgram.id}, prCode=${prCode}, prPosition=${prPosition}, remote=${remoteEnabled ? 'ON' : 'OFF'})`);
           } else {
-            // Fallback to stored name
-            const storedName = this.getStoreValue('lastProgramName');
-            if (storedName && prCode !== '0') {
-              programName = this._getLocalizedProgramName(storedName);
-            } else if (prCode === '0') {
-              programName = '-';
+            this.log(`⚠️ Program not found with prCode=${prCode}, prPosition=${prPosition}`);
+            programName = `Program ${prCode}`;
+          }
+        }
+        else if (!programName && prCode !== null) {
+          // Fallback based on prCode only (when prPosition not available)
+          if (prCode === '0') {
+            // No program code - show dash
+            programName = '-';
+          } else {
+            // Try to find program by prCode only
+            if (this._appliance?.extra) {
+              // Check if remote control is enabled
+              const remoteEnabled = params.remoteCtrValid === 1 || params.remoteCtrValid === '1';
+
+              const foundProgram = this._appliance.extra.findProgramByCode(
+                parseInt(prCode),
+                null,
+                remoteEnabled
+              );
+              if (foundProgram) {
+                // ✅ Use localized name from hOn API translations
+                programName = this._getLocalizedProgramName(foundProgram.id);
+                this.log(`📋 Program found by prCode only: "${programName}" (id: ${foundProgram.id}, prCode=${prCode}, remote=${remoteEnabled ? 'ON' : 'OFF'})`);
+              } else {
+                this.log(`⚠️ Program not found with prCode=${prCode}`);
+                programName = `Program ${prCode}`;
+              }
             } else {
               programName = `Program ${prCode}`;
             }
           }
-        }
-        else if (prCode !== null) {
-          // If prStr not available, use stored name from lastActivity
-          // Try to use stored program name from lastActivity (real program name)
-          const storedName = this.getStoreValue('lastProgramName');
-          if (storedName && prCode !== '0') {
-            // Use stored name if we're in a program (not idle)
-            programName = this._getLocalizedProgramName(storedName);
-          } else if (prCode === '0') {
-            // No program code - show dash
-            programName = '-';
-          } else {
-            // Fallback to generic code
-            programName = `Program ${prCode}`;
-          }
-        } else {
+        } else if (!programName) {
           programName = 'Unknown';
         }
-        
+
         await this.setCapabilityValue('program_name', programName).catch(this.error);
         // Also save in store for flow triggers (if program is running)
         if (programName && programName !== '-') {
@@ -265,106 +312,8 @@ module.exports = class WashingMachineDevice extends Homey.Device {
   }
 
   /**
-   * Format program name from API format to user-friendly format
-   * Delegates to JavahOn library static method for proper formatting
-   * @private
-   * @param {string} apiName - Raw program name from API (e.g. "prWashTempo60")
-   * @returns {string} Formatted program name (e.g. "Wash Tempo 60")
-   * @example
-   * // Format program name from API
-   * const formatted = this._formatProgramName('prWashTempo60');
-   * // Returns: "Wash Tempo 60"
-   */
-  _formatProgramName(apiName) {
-    const { HonParameterProgram } = require('java-hon');
-    return HonParameterProgram.formatProgramName(apiName);
-  }
-
-  /**
-   * Get localized program name from hOn API translations
-   * Falls back to formatted program name if translation not available
-   * @private
-   * @param {string} programId - Program ID from API (e.g., 'rapid_14_min', 'cottons')
-   * @returns {string} Localized program name
-   * @example
-   * const name = this._getLocalizedProgramName('rapid_14_min');
-   * // Returns: "Rapido 14'" (if Italian) or "Rapid 14 Min" (if English)
-   * 
-   * const name = this._getLocalizedProgramName('cottons');
-   * // Returns: "Cotone" (if Italian) or "Cottons" (if English)
-   */
-  _getLocalizedProgramName(programId) {
-    if (!programId) return '';
-
-    const app = this.homey.app;
-
-    // Convert programId to translation key format
-    // Program IDs from API: cottons, iot_wash_baby_sanitizer, drain_spin, rapid_14_min
-    // Translation keys: WM_WD_PROGRAM_NAME_*, WM_WD_PROGRAM_IOT_WASH_NAME_*
-    
-    // Normalize programId: remove _min suffix, convert to uppercase
-    let normalizedId = programId.toUpperCase();
-    
-    // Remove common suffixes that aren't in translation keys
-    normalizedId = normalizedId.replace(/_MIN$/, '');  // rapid_14_min -> RAPID_14
-    
-    // Build list of key variants to try
-    const keyVariants = [];
-    
-    // Check for IOT wash programs (iot_wash_*)
-    if (normalizedId.startsWith('IOT_WASH_')) {
-      const baseName = normalizedId.replace('IOT_WASH_', '');
-      keyVariants.push(`PROGRAMS.WM_WD_PROGRAM_IOT_WASH_NAME_${baseName}`);
-    }
-    // Check for IOT dry programs (iot_dry_*)
-    else if (normalizedId.startsWith('IOT_DRY_')) {
-      const baseName = normalizedId.replace('IOT_DRY_', '');
-      keyVariants.push(`PROGRAMS.WM_WD_PROGRAM_IOT_DRY_NAME_${baseName}`);
-    }
-    // Standard programs
-    else {
-      // Try standard key format first
-      keyVariants.push(`PROGRAMS.WM_WD_PROGRAM_NAME_${normalizedId}`);
-      
-      // Special case: 'cottons' -> try IOT_WASH_NAME_COTTON (singular)
-      if (normalizedId === 'COTTONS') {
-        keyVariants.push('PROGRAMS.WM_WD_PROGRAM_IOT_WASH_NAME_COTTON');
-        keyVariants.push('PROGRAMS.WM_WD_PROGRAM_NAME_RESISTANT_COTTON');
-      }
-      
-      // Special case: 'delicati_59' -> 'DELICATE_59' (English in API)
-      if (normalizedId === 'DELICATI_59') {
-        keyVariants.push('PROGRAMS.WM_WD_PROGRAM_NAME_DELICATE_59');
-      }
-      
-      // Try adding common number suffixes
-      // rapid_14 -> RAPID_14 (IOT variant)
-      if (/^RAPID_\d+$/.test(normalizedId)) {
-        keyVariants.push(`PROGRAMS.WM_WD_PROGRAM_IOT_WASH_NAME_${normalizedId}`);
-      }
-    }
-
-    // Try all key variants
-    for (const key of keyVariants) {
-      const translated = app.getTranslation(key);
-      if (translated !== key) {
-        return translated;
-      }
-    }
-
-    // Try to get name from startProgram command data
-    const startProgramCmd = this._appliance?.commands?.startProgram;
-    if (startProgramCmd?.programs?.[programId]?.name) {
-      return startProgramCmd.programs[programId].name;
-    }
-
-    // Fallback: format the ID
-    return this._formatProgramName(programId);
-  }
-
-  /**
    * Get localized state text from machine mode and phase
-   * Delegates to JavahOn library for translation key mapping
+   * Delegates to JavahOn library for translation logic
    * Uses hOn API translations with fallback to formatted phase key
    * @private
    * @param {number} machMode - Machine mode value (0=idle, 2=running, etc.)
@@ -378,13 +327,9 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    * // Returns: "Pronto" (if Italian) or "Ready" (if English)
    */
   _getLocalizedState(machMode, prPhase) {
-    if (!this._appliance?.extra) return 'Ready';
-    
-    return this._appliance.extra.getLocalizedState(
-      machMode,
-      prPhase,
-      (key) => this.homey.app.getTranslation(key)
-    );
+    if (!this._appliance?.extra) return 'Unknown';
+
+    return this._appliance.extra.getLocalizedState(machMode, prPhase);
   }
 
   /**
@@ -401,16 +346,17 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    */
   async _updateCapabilities() {
     if (!this._appliance || !this._appliance.attributes) {
+      this.log('⚠️  Cannot update capabilities: appliance or attributes missing');
       return;
     }
 
     // Update connection status capability
     const isOnline = this._appliance.connection;
-    await this.setCapabilityValue('connection_status', isOnline ? 'online' : 'offline').catch(this.error);
-    
+    await this.setCapabilityValue('connection_status', isOnline ? 'Online' : 'Offline').catch(this.error);
+
     // Log connection status
     this.log(`📡 Connection status: ${isOnline ? '✅ ONLINE' : '❌ OFFLINE'}`);
-    
+
     // Also check lastConnEvent if available
     if (this._appliance.attributes.lastConnEvent) {
       const lastConn = this._appliance.attributes.lastConnEvent;
@@ -418,14 +364,18 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     }
 
     const params = this._appliance.attributes.parameters || {};
-    
+
+    this.log(`🔍 _updateCapabilities - Found ${Object.keys(params).length} parameters in attributes`);
+
     // Converte i parametri HonParameter in valori semplici
     const simpleParams = {};
     for (const [key, param] of Object.entries(params)) {
-      simpleParams[key] = typeof param === 'object' && param.value !== undefined 
-        ? param.value 
+      simpleParams[key] = typeof param === 'object' && param.value !== undefined
+        ? param.value
         : param;
     }
+
+    this.log(`🔍 Converted to simple params:`, JSON.stringify(simpleParams, null, 2));
 
     await this._updateCapabilitiesFromParams(simpleParams);
   }
@@ -505,7 +455,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
       const app = this.homey.app;
       const api = app.getApi();
-      
+
       if (!api) {
         throw new Error('API not available');
       }
@@ -580,11 +530,11 @@ module.exports = class WashingMachineDevice extends Homey.Device {
       if (startCmd.parameters.prCode) {
         startCmd.parameters.prCode.value = String(programCode);
       }
-      
+
       if (startCmd.parameters.temp) {
         startCmd.parameters.temp.value = String(temperature);
       }
-      
+
       if (startCmd.parameters.spinSpeed) {
         startCmd.parameters.spinSpeed.value = String(spinSpeed);
       }
@@ -602,7 +552,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
       // Execute the command via API
       const app = this.homey.app;
       const api = app.getApi();
-      
+
       if (!api) {
         throw new Error('API not available');
       }
@@ -624,32 +574,32 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
       if (success) {
         this.log('✅ Program started successfully');
-        
+
         // Immediately update capabilities with the values we just sent
         // This ensures that when the wash_started trigger fires, the tokens have correct values
-        
+
         // Find program name using library method
         let programName = `Program ${programCode}`;
         const prPosition = commandParams.prPosition || '0';
-        
+
         if (this._appliance?.extra) {
           const foundProgram = this._appliance.extra.findProgramByCode(
             parseInt(programCode),
             prPosition ? parseInt(prPosition) : null
           );
-          
+
           if (foundProgram) {
             programName = foundProgram.name;
           }
         }
-        
+
         // Update capabilities immediately
         await this.setCapabilityValue('program_name', programName).catch(this.error);
         await this.setCapabilityValue('wash_temperature', temperature).catch(this.error);
         await this.setCapabilityValue('spin_speed', spinSpeed).catch(this.error);
-        
+
         this.log(`📋 Capabilities updated: program="${programName}", temp=${temperature}°C, spin=${spinSpeed}rpm`);
-        
+
         // Note: washer_job_state will be updated via MQTT
       } else {
         this.error('❌ Failed to start program');
@@ -783,7 +733,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     }
 
     this.log('🔄 Starting adaptive polling (MQTT inactive)');
-    
+
     // Poll ogni 10 minuti
     this._pollInterval = this.homey.setInterval(async () => {
       try {
@@ -795,7 +745,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
             this._stopPolling();
             return;
           }
-          
+
           // Attributes are already loaded by loadAppliances()
           // Just update capabilities with current state
           await this._updateCapabilities();
@@ -865,7 +815,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     this._disconnectedHandler = () => {
       this.log('⚠️ MQTT disconnected, device may not receive real-time updates');
       this.setWarning('MQTT disconnected').catch(this.error);
-      
+
       // Start adaptive polling as backup
       this.log('🔄 Activating adaptive polling as backup');
       this._startPolling();
@@ -875,7 +825,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     this._connectedHandler = () => {
       this.log('✅ MQTT reconnected, resuming real-time updates');
       this.unsetWarning().catch(this.error);
-      
+
       // Stop adaptive polling when MQTT is back
       this.log('⏹️  Deactivating adaptive polling (MQTT active)');
       this._stopPolling();
@@ -931,7 +881,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     }
 
     this.log('✅ MQTT handlers cleaned up');
-    
+
     // Also cleanup library event listeners
     this._unregisterLibraryEventListeners();
   }
@@ -954,7 +904,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
   async _initializeDevice() {
     try {
       const app = this.homey.app;
-      
+
       if (!app.isAuthenticated()) {
         this.log('App not authenticated, waiting...');
         this.setUnavailable(this.homey.__('device.not_authenticated') || 'Not authenticated');
@@ -964,9 +914,9 @@ module.exports = class WashingMachineDevice extends Homey.Device {
       // Carica appliances
       const appliances = await app.loadAppliances();
       const macAddress = this.getStoreValue('macAddress');
-      
+
       // Trova l'appliance corrispondente
-      const applianceData = appliances.find(a => 
+      const applianceData = appliances.find(a =>
         (a.macAddress || a.serialNumber) === macAddress
       );
 
@@ -979,10 +929,21 @@ module.exports = class WashingMachineDevice extends Homey.Device {
       // Crea oggetto appliance
       this._appliance = new HonAppliance(app.getApi(), applianceData);
 
+      // 🔍 Check if attributes are already present in applianceData
+      this.log('🔍 Appliance created - checking initial data...');
+      if (applianceData.attributes) {
+        this.log(`   applianceData.attributes exists: ${Object.keys(applianceData.attributes).length} root keys`);
+        if (applianceData.attributes.parameters) {
+          this.log(`   applianceData.attributes.parameters: ${Object.keys(applianceData.attributes.parameters).length} params`);
+        }
+      } else {
+        this.log('   applianceData.attributes: NOT PRESENT');
+      }
+
       // Carica comandi e attributi
       this.log('📥 Loading commands...');
       this.log('🔍 Before loadCommands() call');
-      
+
       try {
         await this._appliance.loadCommands();
       } catch (loadCmdError) {
@@ -990,43 +951,72 @@ module.exports = class WashingMachineDevice extends Homey.Device {
         this.error('Stack trace:', loadCmdError.stack);
         throw loadCmdError;
       }
-      
+
       this.log('🔍 After loadCommands() call - checking results...');
       this.log('Commands loaded:', Object.keys(this._appliance.commands || {}).length);
       this.log('Command names:', Object.keys(this._appliance.commands || {}));
       this.log('✅ Commands loaded');
-      
+
+      // Set translations on appliance for program name localization
+      if (this._appliance.extra) {
+        const translations = await app.loadTranslations();
+        this._appliance.extra.setTranslations(translations);
+        this.log('✅ Translations set on appliance');
+      }
+
       // Log available programs, temperatures and spin speeds
       const programs = this.getAvailablePrograms();
       const temperatures = this.getAvailableTemperatures();
       const spinSpeeds = this.getAvailableSpinSpeeds();
-      
+
       this.log('📋 Available programs:', programs.length);
-      this.log('   Programs:', programs.map(p => `${p.name} (prCode=${p.prCode})`).join(', '));
+      this.log('   Programs:', programs.map(p => `${p.name} (prCode=${p.prCode} - prPosition=${p.prPosition})`).join(', '));
       this.log('🌡️  Available temperatures:', temperatures.join('°C, ') + '°C');
       this.log('🔄 Available spin speeds:', spinSpeeds.join(', ') + ' rpm');
-      
-      // Try to load program name from lastActivity
+
+      // Fetch fresh initial state from API to ensure complete data
+      // This is crucial when app starts with a cycle already in progress
+      // MQTT only sends changed parameters, so initial state might be incomplete
+      this.log('📥 Fetching initial appliance state from API...');
       try {
-        this.log('📥 Loading last activity...');
-        const lastActivity = await app.getApi().loadLastActivity(applianceData);
-        if (lastActivity && lastActivity.programName) {
-          // Store program name for later use
-          await this.setStoreValue('lastProgramName', lastActivity.programName);
-          this.log(`📋 Last program: ${lastActivity.programName}`);
-        }
-      } catch (error) {
-        this.log('⚠️  Could not load last activity:', error.message);
+        await this._appliance.loadAttributes(); // Reload fresh attributes from API
+        this.log('✅ Fresh attributes loaded from API');
+
+        // Log initial state for debugging
+        const params = this._appliance.attributes?.parameters || {};
+
+        this.log('Parametri restituiti dall\'API:', Object.keys(params));
+        // Se vuoi vedere anche i valori:
+        this.log('Dettaglio parametri:', JSON.stringify(params, null, 2));
+
+        const machMode = typeof params.machMode === 'object' ? params.machMode.value : params.machMode;
+        const prCode = typeof params.prCode === 'object' ? params.prCode.value : params.prCode;
+        const prPosition = typeof params.prPosition === 'object' ? params.prPosition.value : params.prPosition;
+        const programName = typeof params.programName === 'object' ? params.programName.value : params.programName;
+        const temp = typeof params.temp === 'object' ? params.temp.value : params.temp;
+        const spinSpeed = typeof params.spinSpeed === 'object' ? params.spinSpeed.value : params.spinSpeed;
+        const remainingTime = typeof params.remainingTimeMM === 'object' ? params.remainingTimeMM.value : params.remainingTimeMM;
+
+        this.log(`   📊 Initial state from API:`);
+        this.log(`      machMode=${machMode}, prPhase=${params.prPhase ? (typeof params.prPhase === 'object' ? params.prPhase.value : params.prPhase) : 'N/A'}`);
+        this.log(`      prCode=${prCode}, prPosition=${prPosition}`);
+        this.log(`      programName=${programName || 'N/A'}`);
+        this.log(`      temp=${temp}°C, spin=${spinSpeed}rpm, remaining=${remainingTime}min`);
+
+      } catch (attrError) {
+        this.log('⚠️  Could not load fresh attributes:', attrError.message);
+        this.log('   Stack:', attrError.stack);
+        // Continue with cached attributes - not critical
       }
 
-      // Aggiorna capabilities con i dati iniziali
-      this.log('📥 Updating capabilities...');
+      // Aggiorna capabilities con i dati iniziali (now fresh from API)
+      this.log('📥 Updating capabilities with initial state...');
       await this._updateCapabilities();
       this.log('✅ Capabilities updated');
 
       // Inizializza MQTT per updates real-time
       await this.initializeMqtt();
-      
+
       // Setup JavahOn library event listeners
       this._setupLibraryEventListeners();
 
@@ -1067,23 +1057,23 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     // Listen to programStarted event from JavahOn
     this._programStartedHandler = async (event) => {
       this.log('🎯 WASH STARTED (from JavahOn event) - Triggering flow');
-      
+
       // Store wash start time
       await this.setStoreValue('washStartTime', event.timestamp);
-      
+
       // Get values from capabilities
-      const programName = this.getCapabilityValue('program_name') 
-        || this.getStoreValue('currentProgramName') 
+      const programName = this.getCapabilityValue('program_name')
+        || this.getStoreValue('currentProgramName')
         || '-';
-      const temperature = this.getCapabilityValue('wash_temperature') 
-        || this.getStoreValue('currentTemp') 
+      const temperature = this.getCapabilityValue('wash_temperature')
+        || this.getStoreValue('currentTemp')
         || 0;
-      const spinSpeed = this.getCapabilityValue('spin_speed') 
-        || this.getStoreValue('currentSpinSpeed') 
+      const spinSpeed = this.getCapabilityValue('spin_speed')
+        || this.getStoreValue('currentSpinSpeed')
         || 0;
-      
+
       this.log(`   Token values: program="${programName}", temp=${temperature}, spin=${spinSpeed}`);
-      
+
       this._washStartedTrigger.trigger(this, {
         program: programName,
         temperature: temperature,
@@ -1094,25 +1084,25 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     // Listen to programFinished event from JavahOn
     this._programFinishedHandler = async (event) => {
       this.log('🎯 WASH FINISHED (from JavahOn event) - Triggering flow');
-      
+
       // Get values from capabilities
-      const programName = this.getCapabilityValue('program_name') 
-        || this.getStoreValue('currentProgramName') 
+      const programName = this.getCapabilityValue('program_name')
+        || this.getStoreValue('currentProgramName')
         || '-';
-      
+
       // Calculate duration from stored start time
       const startTime = this.getStoreValue('washStartTime');
-      const totalTime = startTime 
-        ? Math.round((event.timestamp - startTime) / 60000) 
+      const totalTime = startTime
+        ? Math.round((event.timestamp - startTime) / 60000)
         : 0;
-      
+
       this.log(`   Token values: program="${programName}", duration=${totalTime} min`);
-      
+
       this._washFinishedTrigger.trigger(this, {
         program: programName,
         duration: totalTime
       }).catch(err => this.error('Failed to trigger wash_finished:', err));
-      
+
       // Clear stored values
       await this.setStoreValue('washStartTime', null);
     };
@@ -1169,7 +1159,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     // Register washer_control capability listener
     this.registerCapabilityListener('washer_control', async (value) => {
       this.log(`Washer control command: ${value}`);
-      
+
       // Execute command based on selected value
       switch (value) {
         case 'pause':
@@ -1187,12 +1177,12 @@ module.exports = class WashingMachineDevice extends Homey.Device {
         default:
           throw new Error(`Unknown control command: ${value}`);
       }
-      
+
       // Reset to idle after command execution (except if already idle)
       if (value !== 'idle') {
         await this.setCapabilityValue('washer_control', 'idle').catch(this.error);
       }
-      
+
       return true;
     });
   }
@@ -1211,34 +1201,31 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     // ═══════════════════════════════════════════════════════════════════
     // FLOW TRIGGERS
     // ═══════════════════════════════════════════════════════════════════
-    
+
     // Store trigger cards for later use
     this._washStartedTrigger = this.homey.flow.getDeviceTriggerCard('wash_started');
     this._washFinishedTrigger = this.homey.flow.getDeviceTriggerCard('wash_finished');
-    
+
     // ═══════════════════════════════════════════════════════════════════
     // FLOW ACTIONS
     // ═══════════════════════════════════════════════════════════════════
-    
+
     // Start program action with autocomplete
     const startProgramCard = this.homey.flow.getActionCard('start_program');
-    
+
     // Register autocomplete for program
     startProgramCard.registerArgumentAutocompleteListener('program', async (query, args) => {
       const programs = this.getAvailablePrograms();
+
       return programs
-        .filter(p => {
-          // Get localized name for filtering
-          const localizedName = this._getLocalizedProgramName(p.id);
-          return localizedName.toLowerCase().includes(query.toLowerCase());
-        })
+        .filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
         .map(p => ({
-          name: this._getLocalizedProgramName(p.id), // Use hOn API translations
+          name: p.name, // Already translated by getAvailablePrograms()
           description: `Code: ${p.prCode}`,
           id: String(p.prCode)
         }));
     });
-    
+
     // Register autocomplete for temperature
     startProgramCard.registerArgumentAutocompleteListener('temperature', async (query, args) => {
       const temperatures = this.getAvailableTemperatures();
@@ -1249,7 +1236,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
           id: String(t)
         }));
     });
-    
+
     // Register autocomplete for spin speed
     startProgramCard.registerArgumentAutocompleteListener('spin_speed', async (query, args) => {
       const spinSpeeds = this.getAvailableSpinSpeeds();
@@ -1260,15 +1247,15 @@ module.exports = class WashingMachineDevice extends Homey.Device {
           id: String(s)
         }));
     });
-    
+
     // Register run listener
     startProgramCard.registerRunListener(async (args, state) => {
       this.log('Flow action: start_program', args);
-      
+
       const program = args.program.id;
       const temperature = parseInt(args.temperature.id);
       const spinSpeed = parseInt(args.spin_speed.id);
-      
+
       return await this._startProgram(program, temperature, spinSpeed);
     });
 
@@ -1301,6 +1288,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
   /**
    * Get list of available wash programs for this washing machine
    * Uses JavahOn library to extract program info from appliance data
+   * Programs are automatically localized using translations set on the appliance
    * @public
    * @returns {Array<Object>} Array of program objects with {id, name, prCode, prPosition}
    * @example
@@ -1314,8 +1302,8 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    */
   getAvailablePrograms() {
     if (!this._appliance?.extra) return [];
-    
-    // Use JavahOn library method
+
+    // Use JavahOn library method - translations already set on appliance
     return this._appliance.extra.getAvailablePrograms();
   }
 
@@ -1331,7 +1319,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    */
   getAvailableTemperatures() {
     if (!this._appliance?.extra) return [];
-    
+
     // Use JavahOn library method
     return this._appliance.extra.getAvailableTemperatures();
   }
@@ -1348,7 +1336,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    */
   getAvailableSpinSpeeds() {
     if (!this._appliance?.extra) return [];
-    
+
     // Use JavahOn library method
     return this._appliance.extra.getAvailableSpinSpeeds();
   }
@@ -1371,7 +1359,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
   async initializeMqtt() {
     try {
       const app = this.homey.app;
-      
+
       if (!app.isAuthenticated() || !this._appliance) {
         return;
       }
@@ -1381,20 +1369,20 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
       // Ottieni o avvia il client MQTT
       let mqttClient = app.getMqttClient();
-      
+
       if (!mqttClient) {
         // Only subscribe to devices actually added in Homey
         // Get all Homey devices and their appliances
         const driver = this.driver;
         const devices = driver.getDevices();
-        
+
         // Load only the appliances for registered devices
         const allAppliances = await app.loadAppliances();
         const registeredMacs = devices.map(d => d.getStoreValue('macAddress'));
         const honAppliances = allAppliances
           .filter(info => registeredMacs.includes(info.macAddress))
           .map(info => new HonAppliance(app.getApi(), info));
-        
+
         this.log(`Starting MQTT for ${honAppliances.length} registered device(s)`);
         mqttClient = await app.startMqttClient(honAppliances);
       }
@@ -1430,43 +1418,49 @@ module.exports = class WashingMachineDevice extends Homey.Device {
   async reinitialize(applianceInfo) {
     try {
       this.log('🔄 Reinitializing device after repair...');
-      
+
       const app = this.homey.app;
-      
+
       // Stop existing connections
       this._unregisterMqttHandlers();
-      
+
       // Recreate appliance object with fresh data
       this.log('📦 Creating new appliance instance...');
       this._appliance = new HonAppliance(app.getApi(), applianceInfo);
-      
+
       // Reload commands and attributes
       this.log('📥 Reloading commands...');
       await this._appliance.loadCommands();
       this.log('✅ Commands reloaded:', Object.keys(this._appliance.commands || {}).length);
-      
-      this.log('📥 Reloading attributes...');
-      await this._appliance.loadAttributes();
-      this.log('✅ Attributes reloaded');
-      
+
+      // Set translations on appliance
+      if (this._appliance.extra) {
+        const translations = await app.loadTranslations();
+        this._appliance.extra.setTranslations(translations);
+        this.log('✅ Translations set on appliance');
+      }
+
+      // Attributes are already loaded by loadCommands()
+      this.log('✅ Attributes ready');
+
       // Log available programs again
       const programs = this.getAvailablePrograms();
       this.log('📋 Available programs:', programs.length);
-      
+
       // Update capabilities with fresh data
       this.log('📥 Updating capabilities...');
       await this._updateCapabilities();
       this.log('✅ Capabilities updated');
-      
+
       // Reinitialize MQTT
       this.log('📡 Reinitializing MQTT...');
       await this.initializeMqtt();
       this.log('✅ MQTT reinitialized');
-      
+
       // Mark device as available
       await this.setAvailable();
       this.log('✅ Device reinitialize complete');
-      
+
     } catch (error) {
       this.error('❌ Failed to reinitialize device:', error.message);
       this.error('Stack:', error.stack);
@@ -1478,18 +1472,18 @@ module.exports = class WashingMachineDevice extends Homey.Device {
   // HOMEY LIFECYCLE METHODS
   // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-   * Initialize device on startup
-   * Loads appliance data, registers capability listeners, and sets up MQTT
-   * @public
-   * @async
-   * @returns {Promise<void>}
-   * @example
-   * // Called automatically when device initializes
-   * // Loads appliance from API, sets up MQTT handlers, starts polling
-   */
+  /**
+ * Initialize device on startup
+ * Loads appliance data, registers capability listeners, and sets up MQTT
+ * @public
+ * @async
+ * @returns {Promise<void>}
+ * @example
+ * // Called automatically when device initializes
+ * // Loads appliance from API, sets up MQTT handlers, starts polling
+ */
   async onInit() {
-    this.log('Washing Machine Device initializing:', this.getName());
+    this.log('onInit - Device - Washing Machine Device initializing:', this.getName());
 
     // Stato interno
     this._appliance = null;
@@ -1504,7 +1498,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     // Registra flow card actions
     this._registerFlowCardActions();
 
-    // Inizializza connessione
+    // Initialize connection
     await this._initializeDevice();
 
     this.log('Washing Machine Device initialized:', this.getName());

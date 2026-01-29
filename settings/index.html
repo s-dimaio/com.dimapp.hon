@@ -34,6 +34,19 @@
     .toast.show {
       opacity: 1;
     }
+
+    .toast.success {
+      background-color: #28a745;
+    }
+
+    .toast.error {
+      background-color: #dc3545;
+    }
+
+    .toast.warning {
+      background-color: #ffc107;
+      color: #856404;
+    }
   </style>
 </head>
 
@@ -69,25 +82,19 @@
     </fieldset>
 
     <fieldset class="homey-form-fieldset" style="margin-top: 32px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <legend class="homey-form-legend" style="margin: 0;" data-i18n="settings.diagnostics.legend"></legend>
-        <button type="button" id="download-diagnostics" class="homey-button-secondary-shadow" style="margin: 0;" data-i18n="settings.diagnostics.download_button"></button>
-      </div>
+      <legend class="homey-form-legend" data-i18n="settings.diagnostics.legend"></legend>
 
       <div class="homey-form-group">
         <p style="margin-bottom: 16px; font-size: 14px; color: #666; line-height: 1.5;" data-i18n="settings.diagnostics.description"></p>
 
-        <div id="diagnostics-status" style="margin-top: 12px; font-size: 14px; display: none;"></div>
-        <div id="diagnostics-link" style="margin-top: 12px; display: none;">
-          <div style="display: flex; gap: 12px; align-items: center;">
-            <input type="text" id="diagnostics-url" readonly style="flex: 1; padding: 8px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5;" />
-            <button type="button" id="copy-url-btn" class="homey-button-secondary-shadow" style="white-space: nowrap;">
-              📋 Copy
-            </button>
-          </div>
-          <p style="margin-top: 12px; font-size: 14px; color: #666; line-height: 1.5;">
-            ✅ File ready! Copy the URL above and paste it into your browser's address bar to download the diagnostic data.
-          </p>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; justify-content: center;">
+          <button type="button" id="generate-diagnostics" class="homey-button-secondary-shadow" data-i18n="settings.diagnostics.generate_button"></button>
+        </div>
+
+        <!-- Diagnostic files list -->
+        <div id="diagnostics-files" style="margin-top: 16px; display: none;">
+          <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;" data-i18n="settings.diagnostics.available_files"></h3>
+          <div id="files-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 12px;"></div>
         </div>
       </div>
     </fieldset>
@@ -159,7 +166,7 @@
             console.log('Debug setting saved successfully:', isDebugEnabled);
 
             // Show toast notification
-            showToast('✓ Saved');
+            showToast(Homey.__('settings.diagnostics.settings_saved'), 'success');
           });
 
         } catch (error) {
@@ -169,112 +176,149 @@
       });
 
       // ============================================================
-      // DIAGNOSTICS DOWNLOAD
+      // DIAGNOSTICS GENERATION AND FILE MANAGEMENT
       // ============================================================
 
-      const downloadButton = document.getElementById('download-diagnostics');
-      const diagnosticsStatus = document.getElementById('diagnostics-status');
-      const diagnosticsLinkDiv = document.getElementById('diagnostics-link');
-      const diagnosticsUrlInput = document.getElementById('diagnostics-url');
-      const copyUrlBtn = document.getElementById('copy-url-btn');
+      const generateButton = document.getElementById('generate-diagnostics');
+      const diagnosticsFilesDiv = document.getElementById('diagnostics-files');
+      const filesList = document.getElementById('files-list');
 
-      downloadButton.addEventListener('click', function (e) {
-        try {
-          console.log('Downloading diagnostic data...');
-          
-          // Hide link from previous download
-          diagnosticsLinkDiv.style.display = 'none';
-          
-          // Show loading state
-          downloadButton.disabled = true;
-          diagnosticsStatus.textContent = Homey.__('settings.diagnostics.generating');
-          diagnosticsStatus.style.color = '#666';
-          diagnosticsStatus.style.display = 'block';
-
-          // Call API to generate diagnostics
-          Homey.api('GET', '/diagnostics', undefined, (err, result) => {
-
-            console.log('=== API Callback Fired ===');
-            console.log('Error:', err);
-            console.log('Result type:', typeof result);
-
-            if (err) {
-              console.error('Failed to generate diagnostics:', err);
-              diagnosticsStatus.textContent = Homey.__('settings.diagnostics.error') + ' ' + (err.message || err);
-              diagnosticsStatus.style.color = '#d32f2f';
-              downloadButton.disabled = false;
-              return;
-            }
-
-            // Check if result is valid (should be an object with diagnostic data)
-            if (!result || typeof result !== 'object') {
-              console.error('Invalid result:', result, typeof result);
-              diagnosticsStatus.textContent = Homey.__('settings.diagnostics.error') + ' ' + Homey.__('settings.diagnostics.error_invalid_response');
-              diagnosticsStatus.style.color = '#d32f2f';
-              downloadButton.disabled = false;
-              return;
-            }
-
-            console.log('API returned successfully');
-
-            // Show download URL
-            if (result.url) {
-              const urlInput = document.getElementById('diagnostics-url');
-              urlInput.value = result.url;
-              
-              diagnosticsLinkDiv.style.display = 'block';
-              
-              const count = result.data?.applianceCount || 0;
-              const readyMsg = Homey.__('settings.diagnostics.ready').replace('__count__', count);
-              diagnosticsStatus.textContent = readyMsg;
-              diagnosticsStatus.style.color = '#388e3c';
-              
-              showToast(Homey.__('settings.diagnostics.generation_success'));
-            } else {
-              diagnosticsStatus.textContent = Homey.__('settings.diagnostics.error') + ' ' + Homey.__('settings.diagnostics.error_no_url');
-              diagnosticsStatus.style.color = '#d32f2f';
-            }
-
-            // Reset button
-            downloadButton.disabled = false;
-          });
-
-        } catch (error) {
-          console.error('Failed to download diagnostics:', error);
-          diagnosticsStatus.textContent = Homey.__('settings.diagnostics.error') + ' ' + error.message;
-          diagnosticsStatus.style.color = '#d32f2f';
-          downloadButton.disabled = false;
-        }
-      });
-
-      // Copy URL button handler
-      copyUrlBtn.addEventListener('click', function () {
-        try {
-          if (diagnosticsUrlInput.value) {
-            diagnosticsUrlInput.select();
-            document.execCommand('copy');
-            showToast(Homey.__('settings.diagnostics.copy_success'));
-          }
-        } catch (error) {
-          console.error('Failed to copy URL:', error);
-          showToast(Homey.__('settings.diagnostics.copy_failed'));
-        }
-      });
-
-      // ============================================================
-      // UTILITIES
-      // ============================================================
-
-      // Toast notification function
-      function showToast(message) {
+      // Enhanced toast notification function with color support
+      function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         toast.textContent = message;
+        
+        // Remove existing type classes
+        toast.classList.remove('success', 'error', 'warning');
+        
+        // Add appropriate type class
+        toast.classList.add(type);
         toast.classList.add('show');
 
         setTimeout(() => {
           toast.classList.remove('show');
-        }, 2000);
+        }, 3000);
       }
+
+      // Function to load and display files list
+      function loadFilesList() {
+        Homey.api('GET', '/diagnostic/files', null, function(err, result) {
+          if (err) {
+            console.error('Failed to load files:', err);
+            return;
+          }
+
+          if (result.success && result.files && result.files.length > 0) {
+            diagnosticsFilesDiv.style.display = 'block';
+            
+            let html = '';
+            result.files.forEach(function(file, index) {
+              const date = new Date(file.created).toLocaleString();
+              const sizeKB = (file.size / 1024).toFixed(2);
+              const isLast = index === result.files.length - 1;
+              const borderStyle = isLast ? '' : 'border-bottom: 1px solid #eee;';
+              
+              html += '<div class="diagnostic-file-item" data-filename="' + file.filename + '" style="padding: 8px; ' + borderStyle + ' display: flex; justify-content: space-between; align-items: center;">';
+              html += '  <div>';
+              html += '    <div style="font-weight: 500;">' + file.filename + '</div>';
+              html += '    <div style="font-size: 12px; color: #666;">' + date + ' • ' + sizeKB + ' KB</div>';
+              html += '  </div>';
+              html += '  <div style="display: flex; gap: 8px;">';
+              html += '    <button type="button" class="download-file homey-button-secondary-small" data-url="' + file.url + '" data-i18n="settings.diagnostics.download">Download</button>';
+              html += '    <button type="button" class="delete-file homey-button-danger-small" data-filename="' + file.filename + '" data-i18n="settings.diagnostics.delete">Delete</button>';
+              html += '  </div>';
+              html += '</div>';
+            });
+            
+            filesList.innerHTML = html;
+            
+            // Apply translations to dynamically created elements
+            const dynamicElements = filesList.querySelectorAll('[data-i18n]');
+            dynamicElements.forEach(function(el) {
+              const key = el.getAttribute('data-i18n');
+              el.textContent = Homey.__(key);
+            });
+          } else {
+            diagnosticsFilesDiv.style.display = 'none';
+          }
+        });
+      }
+
+      // Function to delete a file
+      function deleteFile(filename, button) {
+        const confirmMsg = Homey.__('settings.diagnostics.confirm_delete').replace('{{filename}}', filename);
+        Homey.confirm(confirmMsg, 'warning', function(err, confirmed) {
+          if (err) return;
+          if (!confirmed) return;
+          
+          button.disabled = true;
+          
+          Homey.api('DELETE', '/diagnostic/file/' + encodeURIComponent(filename), null, function(err, result) {
+            button.disabled = false;
+            
+            if (err) {
+              showToast(Homey.__('settings.diagnostics.error_deleting').replace('{{error}}', err), 'error');
+              return;
+            }
+            
+            if (!result.success) {
+              showToast(result.error || Homey.__('settings.diagnostics.failed_delete'), 'error');
+              return;
+            }
+            
+            // Refresh list after delete
+            loadFilesList();
+            
+            // Show confirmation
+            showToast(Homey.__('settings.diagnostics.file_deleted'), 'success');
+          });
+        });
+      }
+
+      // Generate diagnostics button
+      generateButton.addEventListener('click', function() {
+        // Disable button with Homey best practice class
+        generateButton.disabled = true;
+        generateButton.classList.add('is-disabled');
+        showToast(Homey.__('settings.diagnostics.generating'), 'warning');
+        
+        Homey.api('GET', '/diagnostics', null, function(err, result) {
+          // Re-enable button
+          generateButton.disabled = false;
+          generateButton.classList.remove('is-disabled');
+          
+          if (err) {
+            showToast(Homey.__('settings.diagnostics.failed').replace('{{error}}', err.message), 'error');
+            return;
+          }
+
+          if (result.success) {
+            const count = result.data?.applianceCount || 0;
+            showToast(Homey.__('settings.diagnostics.diagnostics_saved_toast').replace('{{count}}', count), 'success');
+            loadFilesList();
+          } else {
+            showToast(Homey.__('settings.diagnostics.api_error').replace('{{error}}', result.error), 'error');
+            loadFilesList();
+          }
+        });
+      });
+
+      // Load files list on page load
+      loadFilesList();
+      
+      // Event delegation for file actions
+      filesList.addEventListener('click', function(e) {
+        const downloadBtn = e.target.closest('.download-file');
+        const deleteBtn = e.target.closest('.delete-file');
+        
+        if (downloadBtn) {
+          const url = downloadBtn.getAttribute('data-url');
+          Homey.openURL(url);
+        } else if (deleteBtn) {
+          const filename = deleteBtn.getAttribute('data-filename');
+          deleteFile(filename, deleteBtn);
+        }
+      });
 
       // Tell Homey we're ready
       Homey.ready();

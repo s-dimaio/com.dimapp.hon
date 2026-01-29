@@ -194,37 +194,6 @@ module.exports = class HonApp extends Homey.App {
     return debugEnabled === true;
   }
 
-  /**
-   * Load translations from hOn API based on Homey language setting
-   * Translations include programs, states, parameters, and error messages
-   * @private
-   * @async
-   * @returns {Promise<void>}
-   * @example
-   * // Called automatically after authentication
-   * await this._loadTranslations();
-   */
-  async _loadTranslations() {
-    if (!this._api) {
-      this.log('⚠️  Cannot load translations: API not available');
-      return;
-    }
-
-    try {
-      // Get Homey language (returns 'en', 'it', 'de', 'fr', etc.)
-      const homeyLanguage = this.homey.i18n.getLanguage();
-      this.log(`📖 Loading translations for language: ${homeyLanguage}`);
-
-      // Load translations from hOn API
-      this._translations = await this._api.getTranslations(homeyLanguage);
-
-      const count = Object.keys(this._translations).length;
-      this.log(`✅ Loaded ${count} translations from hOn API`);
-    } catch (error) {
-      this.error('Failed to load translations:', error.message);
-      this._translations = {};
-    }
-  }
 
   /**
    * Performs authentication with hOn servers using provided credentials
@@ -266,9 +235,6 @@ module.exports = class HonApp extends Homey.App {
       // Create API client
       this._api = new HonAPI(this._auth);
 
-      // Load translations
-      await this._loadTranslations();
-
       this.log('Authentication successful');
       return true;
     } catch (error) {
@@ -277,6 +243,38 @@ module.exports = class HonApp extends Homey.App {
       this._auth = null;
       this._api = null;
       throw error;
+    }
+  }
+
+  /**
+   * Load translations from hOn API for current Homey language
+   * Returns translations without caching - passed directly to devices
+   * Public method shared by all device types (washing machines, dryers, ovens, etc.)
+   * @public
+   * @async
+   * @returns {Promise<Object>} Translations object or empty object on error
+   * @example
+   * const translations = await app.loadTranslations();
+   * appliance.extra.setTranslations(translations);
+   */
+  async loadTranslations() {
+    if (!this._api) {
+      this.log('⚠️  Cannot load translations: API not available');
+      return {};
+    }
+
+    try {
+      const homeyLanguage = this.homey.i18n.getLanguage();
+      this.log(`📖 Loading translations for language: ${homeyLanguage}`);
+
+      const translations = await this._api.getTranslations(homeyLanguage);
+      const count = Object.keys(translations).length;
+      this.log(`✅ Loaded ${count} translations from hOn API`);
+      
+      return translations;
+    } catch (error) {
+      this.error('Failed to load translations:', error.message);
+      return {};
     }
   }
 
@@ -326,23 +324,8 @@ module.exports = class HonApp extends Homey.App {
    * const phase = app.getTranslation('WASHING_CMD&CTRL.PHASE_SPIN.TITLE');
    * // Returns: "Centrifuga" (if Italian) or "Spin" (if English)
    */
-  getTranslation(key) {
-    if (!key || !this._translations) return key;
-    
-    // Support nested keys with dot notation
-    const parts = key.split('.');
-    let result = this._translations;
-    
-    for (const part of parts) {
-      if (result && typeof result === 'object' && part in result) {
-        result = result[part];
-      } else {
-        return key; // Key not found, return original
-      }
-    }
-    
-    return typeof result === 'string' ? result : key;
-  }
+  // Translation methods removed - translations are now managed directly by JavahOn library
+  // Devices call app._loadTranslations() to get fresh translations when needed
 
   /**
    * Checks if the app is currently authenticated with hOn servers
@@ -510,7 +493,7 @@ module.exports = class HonApp extends Homey.App {
    * // No manual invocation needed
    */
   async onInit() {
-    this.log('hOn SmartHome App is initializing...');
+    this.log('onInit - App - hOn SmartHome App is initializing...');
 
     // Shared instances
     this._auth = null;
@@ -518,16 +501,10 @@ module.exports = class HonApp extends Homey.App {
     this._mqttClient = null;
     this._tokenHandler = null;
     this._appliances = [];
-    this._translations = {};
 
     // Try to restore session from saved tokens
-    const restored = await this._tryRestoreSession();
-
-    // Load translations if authenticated
-    if (restored && this.isAuthenticated()) {
-      await this._loadTranslations();
-    }
-
+    await this._tryRestoreSession();
+    
     this.log('hOn SmartHome App has been initialized');
   }
 

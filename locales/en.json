@@ -34,16 +34,26 @@
     },
     "diagnostics": {
       "legend": "Diagnostic Data",
-      "download_button": "Download",
+      "generate_button": "Generate Diagnostics",
       "description": "Download a complete diagnostic report of all appliances registered on your hOn account. This data includes commands, parameters, attributes, and statistics for each device, which can be used for future development (e.g., adding support for refrigerators, dishwashers, etc.).",
-      "generating": "⏳ Generating diagnostic data... This may take a minute.",
-      "error": "❌ Error:",
-      "ready": "✅ Ready! Found __count__ appliance(s). URL copied to field below:",
-      "copy_button": "📋 Copy",
-      "copy_instruction": "✅ File ready! Copy the URL above and paste it into your browser's address bar to download the diagnostic data.",
-      "copy_success": "✓ URL copied to clipboard",
-      "copy_failed": "✗ Copy failed",
-      "generation_success": "✓ URL ready - copy and paste in browser"
+      "generating": "Generating diagnostic data...",
+      "failed": "Failed to generate: {{error}}",
+      "diagnostics_saved_toast": "Diagnostics generated! Found {{count}} appliance(s)",
+      "api_error": "API error: {{error}}",
+      "available_files": "Available Files",
+      "download": "Download",
+      "delete": "Delete",
+      "confirm_delete": "Are you sure you want to delete {{filename}}?",
+      "error_deleting": "Error deleting file: {{error}}",
+      "failed_delete": "Failed to delete file",
+      "file_deleted": "File deleted successfully",
+      "settings_saved": "Settings saved successfully"
     }
+  },
+  "phases": {
+    "drain": "Drain",
+    "anti_crease": "Anti-crease",
+    "tumbling": "Tumbling",
+    "steam": "Steam"
   }
 }

@@ -1,6 +1,6 @@
 {
   "id": "com.dimapp.hon",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "platforms": [
@@ -33,6 +33,14 @@
     "cleanupDiagnostics": {
       "method": "DELETE",
       "path": "/diagnostics"
+    },
+    "listDiagnosticFiles": {
+      "method": "GET",
+      "path": "/diagnostic/files"
+    },
+    "deleteDiagnosticFile": {
+      "method": "DELETE",
+      "path": "/diagnostic/file/:filename"
     }
   },
   "brandColor": "#2186b1"

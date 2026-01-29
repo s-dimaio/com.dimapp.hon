@@ -11,7 +11,7 @@
     "en": "hOn SmartHome"
   },
   "description": {
-    "en": "Adds support fon hOn devices"
+    "en": "Your laundry, smarter than ever"
   },
   "category": [
     "appliances"
@@ -34,6 +34,14 @@
     "cleanupDiagnostics": {
       "method": "DELETE",
       "path": "/diagnostics"
+    },
+    "listDiagnosticFiles": {
+      "method": "GET",
+      "path": "/diagnostic/files"
+    },
+    "deleteDiagnosticFile": {
+      "method": "DELETE",
+      "path": "/diagnostic/file/:filename"
     }
   },
   "brandColor": "#2186b1",
@@ -241,7 +249,7 @@
         "en": "Washing Machine",
         "it": "Lavatrice"
       },
-      "class": "other",
+      "class": "washer",
       "capabilities": [
         "washer_control",
         "connection_status",

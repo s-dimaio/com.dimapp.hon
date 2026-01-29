@@ -318,4 +318,111 @@ module.exports = {
       throw new Error(`Cleanup failed: ${error.message}`);
     }
   },
+
+  /**
+   * List all diagnostic files in /userdata/
+   */
+  async listDiagnosticFiles({ homey }) {
+    const app = homey.app;
+    
+    try {
+      const userdataDir = '/userdata';
+
+      // Check if directory exists
+      if (!fs.existsSync(userdataDir)) {
+        return {
+          success: true,
+          files: [],
+          count: 0
+        };
+      }
+
+      const files = fs.readdirSync(userdataDir);
+      const diagnosticFiles = [];
+      const localAddress = await homey.cloud.getLocalAddress();
+      const ipAddress = localAddress.split(':')[0];
+      
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          const filepath = path.join(userdataDir, file);
+          const stats = fs.statSync(filepath);
+          
+          diagnosticFiles.push({
+            filename: file,
+            url: `http://${ipAddress}/app/com.dimapp.hon/userdata/${file}`,
+            size: stats.size,
+            created: stats.birthtime.toISOString()
+          });
+        }
+      }
+      
+      // Sort by creation date (newest first)
+      diagnosticFiles.sort((a, b) => new Date(b.created) - new Date(a.created));
+      
+      return {
+        success: true,
+        files: diagnosticFiles,
+        count: diagnosticFiles.length
+      };
+      
+    } catch (error) {
+      app.error('[API] Failed to list diagnostic files:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        files: [],
+        count: 0
+      };
+    }
+  },
+
+  /**
+   * Delete a specific diagnostic file from /userdata/
+   */
+  async deleteDiagnosticFile({ homey, params }) {
+    const app = homey.app;
+    
+    try {
+      let { filename } = params;
+      
+      if (!filename) {
+        throw new Error('filename parameter is required');
+      }
+
+      // Decode filename if it was URL encoded
+      filename = decodeURIComponent(filename);
+
+      // Security: prevent directory traversal
+      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        throw new Error('Invalid filename');
+      }
+
+      const filepath = path.join('/userdata', filename);
+      
+      // Check if file exists
+      if (!fs.existsSync(filepath)) {
+        return {
+          success: false,
+          error: `File not found: ${filename}`
+        };
+      }
+      
+      fs.unlinkSync(filepath);
+      
+      app.log(`[API] Deleted diagnostic file: ${filename}`);
+      
+      return {
+        success: true,
+        message: `File ${filename} deleted successfully`,
+        deletedFile: filename
+      };
+      
+    } catch (error) {
+      app.error('[API] Failed to delete diagnostic file:', error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
 };

@@ -34,18 +34,26 @@
     },
     "diagnostics": {
       "legend": "Dati di Diagnostica",
-      "download_button": "Scarica",
+      "generate_button": "Genera Diagnostica",
       "description": "Scarica un report diagnostico completo di tutti gli elettrodomestici registrati nel tuo account hOn. Questi dati includono comandi, parametri, attributi e statistiche per ogni dispositivo, che possono essere utilizzati per sviluppi futuri (ad esempio, aggiungere il supporto per frigoriferi, lavastoviglie, ecc.).",
-      "generating": "⏳ Generazione dati di diagnostica in corso... Potrebbe richiedere un minuto.",
-      "error": "❌ Errore:",
-      "error_invalid_response": "Risposta non valida dall'API",
-      "error_no_url": "Nessun URL di download generato",
-      "ready": "✅ Pronto! Trovati __count__ elettrodomestico/i. URL copiato nel campo sottostante:",
-      "copy_button": "📋 Copia",
-      "copy_instruction": "✅ File pronto! Copia l'URL sopra e incollalo nella barra degli indirizzi del tuo browser per scaricare i dati di diagnostica.",
-      "copy_success": "✓ URL copiato negli appunti",
-      "copy_failed": "✗ Copia fallita",
-      "generation_success": "✓ URL pronto - copia e incolla nel browser"
+      "generating": "Generazione dati di diagnostica...",
+      "failed": "Generazione fallita: {{error}}",
+      "diagnostics_saved_toast": "Diagnostica generata! Trovati {{count}} elettrodomestico/i",
+      "api_error": "Errore API: {{error}}",
+      "available_files": "File Disponibili",
+      "download": "Scarica",
+      "delete": "Elimina",
+      "confirm_delete": "Sei sicuro di voler eliminare {{filename}}?",
+      "error_deleting": "Errore nell'eliminazione del file: {{error}}",
+      "failed_delete": "Eliminazione file fallita",
+      "file_deleted": "File eliminato con successo",
+      "settings_saved": "Impostazioni salvate con successo"
     }
+  },
+  "phases": {
+    "drain": "Scarico",
+    "anti_crease": "Anti-piega",
+    "tumbling": "Rotazione cestello",
+    "steam": "Vapore"
   }
 }
