@@ -10,7 +10,8 @@
     "not_authenticated": "Not authenticated. Please repair the device.",
     "not_found": "Device not found in your hOn account.",
     "init_failed": "Device initialization failed.",
-    "offline": "Device is offline."
+    "offline": "Device is offline.",
+    "manual_wash": "Manual wash"
   },
   "errors": {
     "device_offline": "The washing machine is offline. Make sure it is powered on and connected.",

@@ -211,9 +211,9 @@ module.exports = class WashingMachineDevice extends Homey.Device {
           );
 
           if (foundProgram) {
-            // ✅ Use localized name from hOn API translations
-            programName = this._getLocalizedProgramName(foundProgram.id);
-            this.log(`📋 Program found by lookup: "${programName}" (id: ${foundProgram.id}, prCode=${prCode}, prPosition=${prPosition}, remote=${remoteEnabled ? 'ON' : 'OFF'})`);
+            // ✅ Use localized name from hOn API translations with translation key
+            programName = this._getLocalizedProgramName(foundProgram.id, foundProgram.translationKey);
+            this.log(`📋 Program found by lookup: "${programName}" (id: ${foundProgram.id}, key: ${foundProgram.translationKey || 'N/A'}, prCode=${prCode}, prPosition=${prPosition}, remote=${remoteEnabled ? 'ON' : 'OFF'})`);
           } else {
             this.log(`⚠️ Program not found with prCode=${prCode}, prPosition=${prPosition}`);
             programName = `Program ${prCode}`;
@@ -236,9 +236,9 @@ module.exports = class WashingMachineDevice extends Homey.Device {
                 remoteEnabled
               );
               if (foundProgram) {
-                // ✅ Use localized name from hOn API translations
-                programName = this._getLocalizedProgramName(foundProgram.id);
-                this.log(`📋 Program found by prCode only: "${programName}" (id: ${foundProgram.id}, prCode=${prCode}, remote=${remoteEnabled ? 'ON' : 'OFF'})`);
+                // ✅ Use localized name from hOn API translations with translation key
+                programName = this._getLocalizedProgramName(foundProgram.id, foundProgram.translationKey);
+                this.log(`📋 Program found by prCode only: "${programName}" (id: ${foundProgram.id}, key: ${foundProgram.translationKey || 'N/A'}, prCode=${prCode}, remote=${remoteEnabled ? 'ON' : 'OFF'})`);
               } else {
                 this.log(`⚠️ Program not found with prCode=${prCode}`);
                 programName = `Program ${prCode}`;
@@ -330,6 +330,24 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     if (!this._appliance?.extra) return 'Unknown';
 
     return this._appliance.extra.getLocalizedState(machMode, prPhase);
+  }
+
+  /**
+   * Get localized program name from program ID
+   * Delegates to JavahOn library for translation logic
+   * Uses hOn API translations with fallback to program ID
+   * @private
+   * @param {string} programId - Program ID (e.g., 'iot_wash_cotton', 'rapid_14_min')
+   * @param {string|null} translationKey - Optional translation key (e.g., 'PROGRAMS.WM_WD.COTTON')
+   * @returns {string} Localized program name
+   * @example
+   * const name = this._getLocalizedProgramName('iot_wash_cotton', 'PROGRAMS.WM_WD.COTTON');
+   * // Returns: "Cotone" (if Italian) or "Cotton" (if English)
+   */
+  _getLocalizedProgramName(programId, translationKey = null) {
+    if (!this._appliance?.extra) return programId || 'Unknown';
+
+    return this._appliance.extra.getLocalizedProgramName(programId, translationKey);
   }
 
   /**
@@ -1014,6 +1032,61 @@ module.exports = class WashingMachineDevice extends Homey.Device {
       await this._updateCapabilities();
       this.log('✅ Capabilities updated');
 
+      // Check if machine is running but program details are missing (manual wash)
+      // In this case, ensure the UI shows the correct state
+      // Note: We use the just-loaded attributes from API
+      // Check if machine is running but program details are missing (manual wash)
+      // In this case, ensure the UI shows the correct state
+      // Note: We use the just-loaded attributes from API
+      const params = this._appliance.attributes?.parameters || {};
+
+      // Helper to safely extract value
+      const getVal = (p) => (p && typeof p === 'object' && 'value' in p) ? p.value : p;
+
+      const currentMachMode = getVal(params.machMode);
+      const currentPrCode = getVal(params.prCode);
+      const currentProgramName = getVal(params.programName);
+
+      this.log(`🔍 DEBUG: Checking manual wash condition:`);
+      this.log(`   - machMode: ${currentMachMode} (type: ${typeof currentMachMode})`);
+      this.log(`   - prCode: ${currentPrCode} (type: ${typeof currentPrCode})`);
+      this.log(`   - programName: ${currentProgramName}`);
+
+      // Manual Wash Logic:
+      // machMode must be '2' (Running)
+      // prCode usually '0' or missing on manual wash
+      // Also check if prCode is just empty string
+      const isRunning = String(currentMachMode) === '2';
+      const isManualProgram = !currentPrCode || String(currentPrCode) === '0' || String(currentPrCode) === '';
+
+      if (isRunning && isManualProgram) {
+        this.log('🔍 DETECTED MANUAL WASH IN PROGRESS (Condition Met)');
+
+        // Force update of state text as well, in case _updateCapabilities mistook it for something else
+        const prPhaseVal = parseInt(getVal(params.prPhase) || 0);
+        const stateText = this._getLocalizedState(2, prPhaseVal);
+        await this.setCapabilityValue('washer_job_state', stateText).catch(this.error);
+
+        this.log(`   -> Forcing state to: "${stateText}" (machMode=2, prPhase=${prPhaseVal})`);
+        this.log('   Program details not available for manual washes started on the machine');
+
+        // Set program name to indicate manual wash
+        const manualWashLabel = this.homey.__('device.manual_wash') || 'Manual wash';
+        await this.setCapabilityValue('program_name', manualWashLabel).catch(this.error);
+
+        // Update remaining time if available
+        const remainingTime = parseInt(getVal(params.remainingTimeMM) || 0);
+
+        if (remainingTime > 0) {
+          this.log(`   -> Updating remaining time: ${remainingTime} min`);
+          await this.setCapabilityValue('measure_remaining_time', remainingTime).catch(this.error);
+        }
+
+        this.log(`   Set program_name="${manualWashLabel}", remainingTime=${remainingTime}min`);
+      } else {
+        this.log('ℹ️ Manual wash check: Not a manual wash or not running.');
+      }
+
       // Inizializza MQTT per updates real-time
       await this.initializeMqtt();
 
@@ -1061,7 +1134,26 @@ module.exports = class WashingMachineDevice extends Homey.Device {
       // Store wash start time
       await this.setStoreValue('washStartTime', event.timestamp);
 
-      // Get values from capabilities
+      // Check if remote control is disabled (manual wash started on machine)
+      // In this case, MQTT only sends partial updates, so we need to fetch full state from API
+      const remoteEnabled = this.getCapabilityValue('remote_control_enabled');
+      if (!remoteEnabled) {
+        this.log('📱 Remote control disabled - Manual wash detected, fetching full state from API...');
+        try {
+          // Reload fresh attributes from API to get complete program info
+          await this._appliance.loadAttributes();
+          this.log('✅ Fresh attributes loaded from API');
+
+          // Update capabilities with fresh data
+          await this._updateCapabilities();
+          this.log('✅ Capabilities updated with fresh API data');
+        } catch (apiError) {
+          this.error('⚠️ Failed to fetch fresh state from API:', apiError.message);
+          // Continue with cached values - not critical for flow trigger
+        }
+      }
+
+      // Get values from capabilities (now possibly updated from API)
       const programName = this.getCapabilityValue('program_name')
         || this.getStoreValue('currentProgramName')
         || '-';

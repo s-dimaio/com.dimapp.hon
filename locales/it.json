@@ -10,7 +10,8 @@
     "not_authenticated": "Non autenticato. Ripara il dispositivo.",
     "not_found": "Dispositivo non trovato nel tuo account hOn.",
     "init_failed": "Inizializzazione dispositivo fallita.",
-    "offline": "Dispositivo offline."
+    "offline": "Dispositivo offline.",
+    "manual_wash": "Lavaggio manuale"
   },
   "errors": {
     "device_offline": "La lavatrice è offline. Assicurati che sia accesa e connessa.",
