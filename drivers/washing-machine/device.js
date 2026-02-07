@@ -10,74 +10,6 @@ const { HonAppliance } = require('java-hon');
 module.exports = class WashingMachineDevice extends Homey.Device {
 
   // ═══════════════════════════════════════════════════════════════════════
-  // MQTT UPDATES & HANDLERS
-  // ═══════════════════════════════════════════════════════════════════════
-
-  /**
- * Process MQTT message and update device capabilities
- * Updates appliance attributes and marks device as online
- * @private
- * @async
- * @param {Object} payload - MQTT message payload with parameters field
- * @param {Object} payload.parameters - Key-value pairs of appliance parameters
- * @returns {Promise<void>}
- * @throws {Error} If parameter update fails
- * @example
- * // Process MQTT message from broker
- * await this._handleMqttUpdate({
- *   parameters: { machMode: '2', prPhase: '4', remainingTimeMM: 45 }
- * });
- */
-  async _handleMqttUpdate(payload) {
-    try {
-      if (!payload || !payload.parameters) return;
-
-      const params = payload.parameters;
-
-      // Update appliance attributes
-      if (this._appliance && this._appliance.attributes && this._appliance.attributes.parameters) {
-        for (const [key, value] of Object.entries(params)) {
-          if (this._appliance.attributes.parameters[key]) {
-            this._appliance.attributes.parameters[key].value = value;
-          }
-        }
-
-        // If we receive an MQTT message, the appliance is online
-        // Update connection status
-        const wasOffline = !this._appliance.connection;
-        this._appliance.connection = true;
-
-        if (wasOffline) {
-          this.log('📡 Device came online (MQTT message received)');
-          await this.setCapabilityValue('connection_status', 'online').catch(this.error);
-        }
-
-        // Update state in JavahOn library (triggers events: programStarted, programFinished, etc.)
-        if (this._appliance.extra && this._appliance.extra.updateState) {
-          // Only call updateState if machMode or prPhase changed
-          // MQTT sends only changed parameters, so we avoid unnecessary processing
-          if (params.machMode !== undefined || params.prPhase !== undefined) {
-            // Debug: Log parameters being passed to updateState
-            const machModeValue = typeof params.machMode === 'object' ? params.machMode?.value : params.machMode;
-            const prPhaseValue = typeof params.prPhase === 'object' ? params.prPhase?.value : params.prPhase;
-            this.log(`🔄 Calling updateState: machMode=${machModeValue}, prPhase=${prPhaseValue}`);
-
-            this._appliance.extra.updateState(params);
-          }
-        } else {
-          this.log('⚠️ WARNING: _appliance.extra or updateState not available');
-        }
-      }
-
-      // Update capabilities
-      await this._updateCapabilitiesFromParams(params);
-
-    } catch (error) {
-      this.error('Error handling MQTT update:', error.message);
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════
   // CAPABILITY MANAGEMENT & UPDATES
   // ═══════════════════════════════════════════════════════════════════════
 
@@ -167,8 +99,8 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
       // Update program name if we have program information
       // Allow updates even when isIdle if we're receiving program params (program starting)
-      if (params.prStr !== undefined || params.prCode !== undefined || params.programName !== undefined || params.prPosition !== undefined) {
-        let programName = params.prStr || params.programName;
+      if (params.prStr !== undefined || params.prCode !== undefined || params.prPosition !== undefined) {
+        let programName = null;
 
         // Extract prCode and prPosition handling both HonParameter objects {value: 'x'} and simple values
         const prCode = params.prCode !== undefined
@@ -178,77 +110,44 @@ module.exports = class WashingMachineDevice extends Homey.Device {
           ? String(typeof params.prPosition === 'object' && params.prPosition.value !== undefined ? params.prPosition.value : params.prPosition)
           : null;
 
-        this.log(`🔍 PROGRAM LOOKUP - prCode=${prCode}, prPosition=${prPosition}, programName=${programName || 'not provided'}`);
+        this.log(`🔍 PROGRAM LOOKUP - prCode=${prCode}, prPosition=${prPosition}, prStr=${params.prStr || 'not provided'}`);
 
-        // If programName from MQTT params is available, use it (most accurate)
-        if (params.programName) {
-          programName = this._getLocalizedProgramName(params.programName);
-          this.log(`📋 Program from MQTT programName: "${programName}"`);
-        }
-        // If prStr is provided, format it
-        else if (params.prStr) {
-          programName = this._getLocalizedProgramName(params.prStr);
-          this.log(`📋 Program from MQTT prStr: "${programName}"`);
-        }
-        // Check if programName is in loaded attributes (initial state from API)
-        else if (!programName && this._appliance?.attributes?.parameters?.programName) {
-          const attrProgramName = this._appliance.attributes.parameters.programName;
-          const rawName = typeof attrProgramName === 'object' ? attrProgramName.value : attrProgramName;
-          if (rawName) {
-            programName = this._getLocalizedProgramName(rawName);
-            this.log(`📋 Program from attributes: "${programName}" (raw: ${rawName})`);
+        // STRATEGY 1: If MQTT provides prStr, use it as translation key
+        if (params.prStr) {
+          if (this._appliance?.extra) {
+            programName = this._appliance.extra.getLocalizedProgramName(null, params.prStr);
+            this.log(`✅ Localized program name from prStr: "${programName}" (key: ${params.prStr})`);
+          } else {
+            programName = params.prStr;
           }
         }
-        // Try to find program by prCode + prPosition combination using library
-        if (!programName && prCode !== null && prPosition !== null && this._appliance?.extra) {
-          // Check if remote control is enabled
-          const remoteEnabled = params.remoteCtrValid === 1 || params.remoteCtrValid === '1';
+        // STRATEGY 2: If no prStr, use findProgramByCode
+        else if (prCode !== null && prCode !== '0' && this._appliance?.extra) {
+          const remoteEnabled = this.getCapabilityValue('remote_control_enabled') || false;
 
           const foundProgram = this._appliance.extra.findProgramByCode(
             parseInt(prCode),
-            parseInt(prPosition),
+            prPosition !== null ? parseInt(prPosition) : null,
             remoteEnabled
           );
 
           if (foundProgram) {
-            // ✅ Use localized name from hOn API translations with translation key
-            programName = this._getLocalizedProgramName(foundProgram.id, foundProgram.translationKey);
-            this.log(`📋 Program found by lookup: "${programName}" (id: ${foundProgram.id}, key: ${foundProgram.translationKey || 'N/A'}, prCode=${prCode}, prPosition=${prPosition}, remote=${remoteEnabled ? 'ON' : 'OFF'})`);
+            // ✅ Use the already-localized name from findProgramByCode
+            programName = foundProgram.name;
+            this.log(`📋 Found program by code: name="${programName}", id="${foundProgram.id}", translationKey="${foundProgram.translationKey}", prCode=${prCode}, prPosition=${prPosition}, remote=${remoteEnabled ? 'ON' : 'OFF'}`);
           } else {
             this.log(`⚠️ Program not found with prCode=${prCode}, prPosition=${prPosition}`);
-            programName = `Program ${prCode}`;
+            programName = this.homey.__('program.fallback', { code: prCode });
           }
         }
-        else if (!programName && prCode !== null) {
-          // Fallback based on prCode only (when prPosition not available)
-          if (prCode === '0') {
-            // No program code - show dash
-            programName = '-';
-          } else {
-            // Try to find program by prCode only
-            if (this._appliance?.extra) {
-              // Check if remote control is enabled
-              const remoteEnabled = params.remoteCtrValid === 1 || params.remoteCtrValid === '1';
+        // STRATEGY 3: No program info available
+        else if (prCode === '0' || prCode === null) {
+          programName = '-'; // No program
+        }
 
-              const foundProgram = this._appliance.extra.findProgramByCode(
-                parseInt(prCode),
-                null,
-                remoteEnabled
-              );
-              if (foundProgram) {
-                // ✅ Use localized name from hOn API translations with translation key
-                programName = this._getLocalizedProgramName(foundProgram.id, foundProgram.translationKey);
-                this.log(`📋 Program found by prCode only: "${programName}" (id: ${foundProgram.id}, key: ${foundProgram.translationKey || 'N/A'}, prCode=${prCode}, remote=${remoteEnabled ? 'ON' : 'OFF'})`);
-              } else {
-                this.log(`⚠️ Program not found with prCode=${prCode}`);
-                programName = `Program ${prCode}`;
-              }
-            } else {
-              programName = `Program ${prCode}`;
-            }
-          }
-        } else if (!programName) {
-          programName = 'Unknown';
+        // Final fallback
+        if (!programName) {
+          programName = this.homey.__('program.unknown');
         }
 
         await this.setCapabilityValue('program_name', programName).catch(this.error);
@@ -332,23 +231,6 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     return this._appliance.extra.getLocalizedState(machMode, prPhase);
   }
 
-  /**
-   * Get localized program name from program ID
-   * Delegates to JavahOn library for translation logic
-   * Uses hOn API translations with fallback to program ID
-   * @private
-   * @param {string} programId - Program ID (e.g., 'iot_wash_cotton', 'rapid_14_min')
-   * @param {string|null} translationKey - Optional translation key (e.g., 'PROGRAMS.WM_WD.COTTON')
-   * @returns {string} Localized program name
-   * @example
-   * const name = this._getLocalizedProgramName('iot_wash_cotton', 'PROGRAMS.WM_WD.COTTON');
-   * // Returns: "Cotone" (if Italian) or "Cotton" (if English)
-   */
-  _getLocalizedProgramName(programId, translationKey = null) {
-    if (!this._appliance?.extra) return programId || 'Unknown';
-
-    return this._appliance.extra.getLocalizedProgramName(programId, translationKey);
-  }
 
   /**
    * Update all device capabilities from current appliance data
@@ -406,15 +288,14 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    * Validate device is ready to execute commands
    * Checks both connection status and remote control enabled
    * @private
-   * @param {string} commandName - Name of command being validated (for logging)
    * @returns {void}
    * @throws {Error} With localized error message if device not ready
    * @example
    * // Check device before executing command
-   * this._validateDeviceReady('startProgram');
+   * this._validateDeviceReady();
    * // Throws error if device offline or remote control disabled
    */
-  _validateDeviceReady(commandName) {
+  _validateDeviceReady() {
     // Check connection status
     const connectionStatus = this.getCapabilityValue('connection_status');
     if (connectionStatus !== 'online') {
@@ -428,84 +309,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     }
   }
 
-  /**
-   * Get clean appliance info object for API calls
-   * Creates a safe copy without circular references
-   * @private
-   * @returns {Object} Clean appliance info with macAddress, applianceType, and options
-   * @example
-   * // Get clean info for API call
-   * const info = this._getCleanApplianceInfo();
-   * await api.sendCommand(info, 'startProgram', params);
-   */
-  _getCleanApplianceInfo() {
-    return {
-      macAddress: this._appliance.macAddress,
-      applianceType: this._appliance.applianceType,
-      options: this._appliance.options || {}
-    };
-  }
 
-  /**
-   * Execute a simple appliance command (pause/resume/stop)
-   * Generic helper that handles common command execution pattern
-   * @private
-   * @async
-   * @param {string} commandName - Command name to execute (e.g., 'pauseProgram')
-   * @param {string} logEmoji - Emoji for log messages (e.g., '⏸️')
-   * @param {string} actionVerb - Action verb for log messages (e.g., 'paused')
-   * @returns {Promise<boolean>} True if command sent successfully
-   * @throws {Error} If device not ready or command fails
-   * @example
-   * // Execute pause command
-   * const success = await this._executeSimpleCommand('pauseProgram', '⏸️', 'paused');
-   */
-  async _executeSimpleCommand(commandName, logEmoji, actionVerb) {
-    try {
-      this.log(`${logEmoji} ${actionVerb.charAt(0).toUpperCase() + actionVerb.slice(1)}ing program...`);
-
-      // Validate device is ready (online + remote control enabled)
-      this._validateDeviceReady(commandName);
-
-      if (!this._appliance || !this._appliance.commands || !this._appliance.commands[commandName]) {
-        throw new Error(`${commandName} command not available`);
-      }
-
-      const app = this.homey.app;
-      const api = app.getApi();
-
-      if (!api) {
-        throw new Error('API not available');
-      }
-
-      // Sync command parameters with settings before sending
-      this._appliance.syncCommand(commandName, 'settings');
-
-      // Get parameters from the command
-      const command = this._appliance.commands[commandName];
-      const commandParams = command.parameterGroups.parameters || {};
-      const ancillaryParams = command.parameterGroups.ancillaryParameters || {};
-
-      const success = await api.sendCommand(
-        this._getCleanApplianceInfo(),
-        commandName,
-        commandParams,
-        ancillaryParams
-      );
-
-      if (success) {
-        this.log(`✅ Program ${actionVerb} successfully`);
-      } else {
-        this.error(`❌ Failed to ${actionVerb.replace('ed', '')} program`);
-      }
-
-      return success;
-
-    } catch (error) {
-      this.error(`Error ${actionVerb.replace('ed', '')}ing program:`, error.message);
-      throw error;
-    }
-  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // COMMAND EXECUTION
@@ -516,7 +320,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    * Validates device readiness, sets command parameters, and sends to API
    * @private
    * @async
-   * @param {string} programCode - Program code (prCode) to execute
+   * @param {string} programId - Program ID (e.g., 'rapid_14_min', 'perfect_cotton_59')
    * @param {number} [temperature=30] - Temperature in °C
    * @param {number} [spinSpeed=1000] - Spin speed in rpm
    * @param {Object} [options] - Additional start options
@@ -525,17 +329,17 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    * @returns {Promise<boolean>} True if command sent successfully
    * @throws {Error} If device not ready or command fails
    * @example
-   * // Start eco program at 40°C with 800 rpm spin
-   * const success = await this._startProgram('40', 40, 800);
+   * // Start rapid 14 min program at 30°C with 1000 rpm spin
+   * const success = await this._startProgram('rapid_14_min', 30, 1000);
    * // Or with delay time
-   * const success = await this._startProgram('40', 40, 800, { delayTime: 30 });
+   * const success = await this._startProgram('perfect_cotton_59', 40, 800, { delayTime: 30 });
    */
-  async _startProgram(programCode, temperature = 30, spinSpeed = 1000, options = {}) {
+  async _startProgram(programId, temperature = 30, spinSpeed = 1000, options = {}) {
     try {
-      this.log(`🚀 Starting program: code=${programCode}, temp=${temperature}°C, spin=${spinSpeed}rpm`);
+      this.log(`🚀 Starting program: id=${programId}, temp=${temperature}°C, spin=${spinSpeed}rpm`);
 
       // Validate device is ready (online + remote control enabled)
-      this._validateDeviceReady('startProgram');
+      this._validateDeviceReady();
 
       if (!this._appliance || !this._appliance.commands || !this._appliance.commands.startProgram) {
         throw new Error('Start program command not available');
@@ -544,74 +348,38 @@ module.exports = class WashingMachineDevice extends Homey.Device {
       // Get the command object
       const startCmd = this._appliance.commands.startProgram;
 
-      // Set the program parameters
-      if (startCmd.parameters.prCode) {
-        startCmd.parameters.prCode.value = String(programCode);
+      // Prepare parameters to send
+      const params = {
+        program: programId,
+        temp: String(temperature),
+        spinSpeed: String(spinSpeed)
+      };
+
+      // Add optional parameters
+      if (options.delayTime !== undefined) {
+        params.delayTime = options.delayTime;
       }
 
-      if (startCmd.parameters.temp) {
-        startCmd.parameters.temp.value = String(temperature);
+      if (options.extraRinse) {
+        params.extraRinse1 = 1;
       }
 
-      if (startCmd.parameters.spinSpeed) {
-        startCmd.parameters.spinSpeed.value = String(spinSpeed);
-      }
+      this.log(`📋 Sending command with params:`, params);
 
-      // Set delay time if provided
-      if (options.delayTime !== undefined && startCmd.parameters.delayTime) {
-        startCmd.parameters.delayTime.value = options.delayTime;
-      }
+      // Send the command using the library's send() method with parameters
+      // This will auto-complete parameters and return detailed program information
+      const result = await startCmd.send(params);
 
-      // Set extra rinse if provided
-      if (options.extraRinse && startCmd.parameters.extraRinse1) {
-        startCmd.parameters.extraRinse1.value = 1;
-      }
-
-      // Execute the command via API
-      const app = this.homey.app;
-      const api = app.getApi();
-
-      if (!api) {
-        throw new Error('API not available');
-      }
-
-      // Sync command parameters with settings before sending
-      this._appliance.syncCommand('startProgram', 'settings');
-
-      // Get parameters from the command
-      const command = this._appliance.commands.startProgram;
-      const commandParams = command.parameterGroups.parameters || {};
-      const ancillaryParams = command.parameterGroups.ancillaryParameters || {};
-
-      const success = await api.sendCommand(
-        this._getCleanApplianceInfo(),
-        'startProgram',
-        commandParams,
-        ancillaryParams
-      );
-
-      if (success) {
+      if (result.success) {
         this.log('✅ Program started successfully');
 
-        // Immediately update capabilities with the values we just sent
-        // This ensures that when the wash_started trigger fires, the tokens have correct values
+        // Use the program information returned by send() - no need to call getAvailablePrograms()
+        const programName = result.programName;  // Already localized by the library
 
-        // Find program name using library method
-        let programName = `Program ${programCode}`;
-        const prPosition = commandParams.prPosition || '0';
+        this.log(`📋 Program info from send(): name="${programName}", temp=${result.parameters.temp}°C, spin=${result.parameters.spinSpeed}rpm`);
 
-        if (this._appliance?.extra) {
-          const foundProgram = this._appliance.extra.findProgramByCode(
-            parseInt(programCode),
-            prPosition ? parseInt(prPosition) : null
-          );
-
-          if (foundProgram) {
-            programName = foundProgram.name;
-          }
-        }
-
-        // Update capabilities immediately
+        // Update capabilities immediately with the values from the result
+        //TODO: Check if this is needed
         await this.setCapabilityValue('program_name', programName).catch(this.error);
         await this.setCapabilityValue('wash_temperature', temperature).catch(this.error);
         await this.setCapabilityValue('spin_speed', spinSpeed).catch(this.error);
@@ -620,10 +388,10 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
         // Note: washer_job_state will be updated via MQTT
       } else {
-        this.error('❌ Failed to start program');
+        this.error('❌ Failed to start program:', result.error || 'Unknown error');
       }
 
-      return success;
+      return result.success;
 
     } catch (error) {
       this.error('Error starting program:', error.message);
@@ -643,7 +411,24 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    * const success = await this._pauseProgram();
    */
   async _pauseProgram() {
-    return this._executeSimpleCommand('pauseProgram', '⏸️', 'paused');
+    try {
+      this.log('⏸️ Pausing program...');
+
+      // Validate device is ready (online + remote control enabled)
+      this._validateDeviceReady();
+
+      if (!this._appliance || !this._appliance.commands || !this._appliance.commands.pauseProgram) {
+        throw new Error('Pause command not available');
+      }
+
+      const result = await this._appliance.commands.pauseProgram.send();
+      this.log('✅ Program paused successfully');
+      return true;
+
+    } catch (error) {
+      this.error('Error pausing program:', error.message);
+      throw error;
+    }
   }
 
   /**
@@ -658,7 +443,24 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    * const success = await this._resumeProgram();
    */
   async _resumeProgram() {
-    return this._executeSimpleCommand('resumeProgram', '▶️', 'resumed');
+    try {
+      this.log('▶️ Resuming program...');
+
+      // Validate device is ready (online + remote control enabled)
+      this._validateDeviceReady();
+
+      if (!this._appliance || !this._appliance.commands || !this._appliance.commands.resumeProgram) {
+        throw new Error('Resume command not available');
+      }
+
+      const result = await this._appliance.commands.resumeProgram.send();
+      this.log('✅ Program resumed successfully');
+      return true;
+
+    } catch (error) {
+      this.error('Error resuming program:', error.message);
+      throw error;
+    }
   }
 
   /**
@@ -673,56 +475,26 @@ module.exports = class WashingMachineDevice extends Homey.Device {
    * const success = await this._stopProgram();
    */
   async _stopProgram() {
-    return this._executeSimpleCommand('stopProgram', '⏹️', 'stopped');
-  }
-
-  /**
-   * Send a command to the appliance (legacy method)
-   * For new code, use specific methods like _startProgram, _pauseProgram, etc
-   * @private
-   * @async
-   * @deprecated Use specific command methods instead
-   * @param {string} commandName - Command name to execute
-   * @param {Object} [parameters={}] - Command parameters
-   * @returns {Promise<boolean>} True if command sent successfully
-   * @throws {Error} If device not initialized or API fails
-   * @example
-   * // Legacy: Send command via generic method
-   * const success = await this._sendCommand('startProgram', {});
-   * // Preferred: Use specific method
-   * const success = await this._startProgram('40', 40, 800);
-   */
-  async _sendCommand(commandName, parameters = {}) {
     try {
-      if (!this._appliance) {
-        throw new Error('Device not initialized');
+      this.log('⏹️ Stopping program...');
+
+      // Validate device is ready (online + remote control enabled)
+      this._validateDeviceReady();
+
+      if (!this._appliance || !this._appliance.commands || !this._appliance.commands.stopProgram) {
+        throw new Error('Stop command not available');
       }
 
-      const app = this.homey.app;
-      const api = app.getApi();
+      const result = await this._appliance.commands.stopProgram.send();
+      this.log('✅ Program stopped successfully');
+      return true;
 
-      if (!api) {
-        throw new Error('API not available');
-      }
-
-      const success = await api.sendCommand(
-        this._appliance.info,
-        commandName,
-        parameters
-      );
-
-      if (success) {
-        this.log(`Command ${commandName} sent successfully`);
-      } else {
-        this.error(`Command ${commandName} failed`);
-      }
-
-      return success;
     } catch (error) {
-      this.error(`Error sending command ${commandName}:`, error.message);
+      this.error('Error stopping program:', error.message);
       throw error;
     }
   }
+
 
   // ═══════════════════════════════════════════════════════════════════════
   // POLLING & BACKGROUND UPDATES
@@ -1311,11 +1083,20 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
       return programs
         .filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
-        .map(p => ({
-          name: p.name, // Already translated by getAvailablePrograms()
-          description: `Code: ${p.prCode}`,
-          id: String(p.prCode)
-        }));
+        .map(p => {
+          // Build description with temperature and spin speed
+          const tempStr = p.temp !== null ? `${p.temp}°C` : '-';
+          const spinStr = p.spinSpeed !== null ? `${p.spinSpeed} rpm` : '-';
+
+          return {
+            name: p.name, // Already translated by getAvailablePrograms()
+            description: `${tempStr} • ${spinStr}`,
+            id: p.id, // ✅ Use program ID, not prCode
+            // Store temp and spin for potential future use
+            temp: p.temp,
+            spinSpeed: p.spinSpeed
+          };
+        });
     });
 
     // Register autocomplete for temperature

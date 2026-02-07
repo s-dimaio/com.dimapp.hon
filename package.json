@@ -7,6 +7,6 @@
     "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.12"
   },
   "dependencies": {
-    "java-hon": "git+https://github.com/s-dimaio/JavahOn.git#v1.5.2"
+    "java-hon": "git+https://github.com/s-dimaio/JavahOn.git#v1.6.4"
   }
 }

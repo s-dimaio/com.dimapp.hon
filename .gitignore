@@ -16,6 +16,7 @@
 .homeyignore
 *.ps1
 *.bat
+TODO.txt
 
 # IDE
 *.code-workspace

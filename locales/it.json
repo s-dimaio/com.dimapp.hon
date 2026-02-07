@@ -13,6 +13,10 @@
     "offline": "Dispositivo offline.",
     "manual_wash": "Lavaggio manuale"
   },
+  "program": {
+    "unknown": "Sconosciuto",
+    "fallback": "Programma {{code}}"
+  },
   "errors": {
     "device_offline": "La lavatrice è offline. Assicurati che sia accesa e connessa.",
     "remote_control_disabled": "Controllo remoto non abilitato. Abilitalo sul display della lavatrice."

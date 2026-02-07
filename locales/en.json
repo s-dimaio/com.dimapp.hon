@@ -13,6 +13,10 @@
     "offline": "Device is offline.",
     "manual_wash": "Manual wash"
   },
+  "program": {
+    "unknown": "Unknown",
+    "fallback": "Program {{code}}"
+  },
   "errors": {
     "device_offline": "The washing machine is offline. Make sure it is powered on and connected.",
     "remote_control_disabled": "Remote control is not enabled. Please enable it on the washing machine display."

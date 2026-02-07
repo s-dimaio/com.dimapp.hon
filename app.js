@@ -16,8 +16,9 @@ module.exports = class HonApp extends Homey.App {
   // ═══════════════════════════════════════════════════════════════════════
 
   /**
-   * Setup MQTT message routing to correct devices
-   * Routes messages based on MAC address in topic
+   * Setup MQTT client event handlers for global connection monitoring
+   * Handles MQTT broker connection status (connected, disconnected, error)
+   * Note: Appliance-specific updates are now handled autonomously by the library
    * @private
    * @returns {void}
    * @example
@@ -25,51 +26,19 @@ module.exports = class HonApp extends Homey.App {
    * this._setupMqttRouting();
    */
   _setupMqttRouting() {
-    // Route appliancestatus messages
-    this._mqttClient.on('applianceUpdate', ({ appliance, payload }) => {
-      const macAddress = appliance.macAddress;
-
-      if (!macAddress) {
-        this.error('Received MQTT message without MAC address');
-        return;
-      }
-
-      this.log(`📨 MQTT appliancestatus for MAC: ${macAddress}`);
-
-      // Emit event with MAC address for device filtering
-      this.emit(`mqtt:appliancestatus:${macAddress}`, {
-        appliance,
-        payload
-      });
-    });
-
-    // Route connection changes
-    this._mqttClient.on('connectionChange', ({ appliance, connected }) => {
-      const macAddress = appliance.macAddress;
-
-      if (!macAddress) {
-        this.error('Received MQTT connection change without MAC address');
-        return;
-      }
-
-      this.log(`📡 MQTT connection change for MAC: ${macAddress} - ${connected ? 'online' : 'offline'}`);
-
-      this.emit(`mqtt:connection:${macAddress}`, connected);
-    });
-
-    // Handle disconnections
+    // Handle global MQTT disconnections
     this._mqttClient.on('disconnected', () => {
       this.log('⚠️ MQTT disconnected');
       this.emit('mqtt:disconnected');
     });
 
-    // Handle reconnections
+    // Handle global MQTT reconnections
     this._mqttClient.on('connected', () => {
       this.log('✅ MQTT connected');
       this.emit('mqtt:connected');
     });
 
-    // Handle errors
+    // Handle global MQTT errors
     this._mqttClient.on('error', (error) => {
       this.error('MQTT error:', error.message);
       this.emit('mqtt:error', error);
@@ -270,7 +239,7 @@ module.exports = class HonApp extends Homey.App {
       const translations = await this._api.getTranslations(homeyLanguage);
       const count = Object.keys(translations).length;
       this.log(`✅ Loaded ${count} translations from hOn API`);
-      
+
       return translations;
     } catch (error) {
       this.error('Failed to load translations:', error.message);
@@ -504,7 +473,7 @@ module.exports = class HonApp extends Homey.App {
 
     // Try to restore session from saved tokens
     await this._tryRestoreSession();
-    
+
     this.log('hOn SmartHome App has been initialized');
   }
 
