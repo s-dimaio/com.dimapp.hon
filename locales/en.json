@@ -15,7 +15,7 @@
   },
   "program": {
     "unknown": "Unknown",
-    "fallback": "Program {{code}}"
+    "fallback": "Program __code__"
   },
   "errors": {
     "device_offline": "The washing machine is offline. Make sure it is powered on and connected.",
@@ -42,14 +42,14 @@
       "generate_button": "Generate Diagnostics",
       "description": "Download a complete diagnostic report of all appliances registered on your hOn account. This data includes commands, parameters, attributes, and statistics for each device, which can be used for future development (e.g., adding support for refrigerators, dishwashers, etc.).",
       "generating": "Generating diagnostic data...",
-      "failed": "Failed to generate: {{error}}",
-      "diagnostics_saved_toast": "Diagnostics generated! Found {{count}} appliance(s)",
-      "api_error": "API error: {{error}}",
+      "failed": "Failed to generate: __error__",
+      "diagnostics_saved_toast": "Diagnostics generated! Found __count__ appliance(s)",
+      "api_error": "API error: __error__",
       "available_files": "Available Files",
       "download": "Download",
       "delete": "Delete",
-      "confirm_delete": "Are you sure you want to delete {{filename}}?",
-      "error_deleting": "Error deleting file: {{error}}",
+      "confirm_delete": "Are you sure you want to delete __filename__?",
+      "error_deleting": "Error deleting file: __error__",
       "failed_delete": "Failed to delete file",
       "file_deleted": "File deleted successfully",
       "settings_saved": "Settings saved successfully"

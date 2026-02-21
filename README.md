@@ -2,7 +2,7 @@
 
 [![Homey](https://img.shields.io/badge/Homey-Compatible-blue.svg)](https://homey.app)
 [![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/s-dimaio/com.dimapp.hon)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
 Unofficial Homey app for Haier/Hoover/Candy hOn smart home appliances. Control your connected washing machines directly from Homey with real-time status updates and powerful automation capabilities.
 
@@ -58,14 +58,6 @@ Unofficial Homey app for Haier/Hoover/Candy hOn smart home appliances. Control y
   - Full program control and monitoring
   - Real-time MQTT updates
   - 20+ washing programs supported
-
-### Planned Future Support
-- ⏳ Washer-Dryers (WD)
-- ⏳ Dryers (TD)
-- ⏳ Dishwashers (DW)
-- ⏳ Ovens (OV)
-- ⏳ Air Conditioners (AC)
-- ⏳ Refrigerators (REF)
 
 ## Configuration
 
@@ -163,19 +155,10 @@ The app uses the same API as the official hOn mobile app and does not bypass any
 - **Developer**: Simone Di Maio
 - **JavahOn Library**: Based on [pyhOn](https://github.com/Andre0512/pyhon) by Andre Basche
 
-## Changelog
-
-### Version 1.0.0 (Initial Release)
-- ✅ Washing machine support with full program control
-- ✅ Real-time MQTT updates
-- ✅ Adaptive polling fallback
-- ✅ Flow card integration
-- ✅ Multi-language support (EN, IT)
-- ✅ Diagnostic export functionality
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) file for details
+GNU General Public License v3.0 - See [LICENSE](LICENSE) file for details
 
 ---
 

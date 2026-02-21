@@ -77,8 +77,6 @@ module.exports = class WashingMachineDevice extends Homey.Device {
       if (machMode) {
         let stateText = '';
 
-        this.log(`🔍 STATE CHECK - machMode=${machMode}, prPhase=${prPhase}`);
-
         // Get localized state text from hOn API translations
         stateText = this._getLocalizedState(parseInt(machMode), parseInt(prPhase || 0));
 
@@ -568,36 +566,23 @@ module.exports = class WashingMachineDevice extends Homey.Device {
   // ═══════════════════════════════════════════════════════════════════════
 
   /**
-   * Register MQTT event handlers for this device
-   * Listens only to appliance status and connection messages for this MAC address
+   * Register MQTT event handlers for device connection monitoring and parameter updates
+   * Listens to appliance-specific connection events, MQTT broker status, and parameter updates
+   * Connection status and capabilities are updated in real-time from MQTT messages
    * @private
    * @returns {void}
    * @example
    * // Set up MQTT handlers for device
    * this._setupMqttHandlers();
-   * // Device will receive real-time status updates from MQTT broker
+   * // Device will monitor appliance connectivity and receive real-time parameter updates
    */
   _setupMqttHandlers() {
     const macAddress = this.getStoreValue('macAddress');
-    this.log(`Setting up MQTT handlers for MAC: ${macAddress}`);
+    this.log('Setting up MQTT handlers...');
 
-    // Listen only to messages for THIS device
-    const applianceStatusEvent = `mqtt:appliancestatus:${macAddress}`;
-    const connectionEvent = `mqtt:connection:${macAddress}`;
-
-    // Handler for appliance status updates
-    this._applianceStatusHandler = async (data) => {
-      try {
-        await this._handleMqttUpdate(data.payload);
-      } catch (error) {
-        this.error('❌ Failed to update capabilities from MQTT:', error.message);
-      }
-    };
-
-    // Handler for connection changes
+    // Handler for appliance connection changes (online/offline)
     this._connectionHandler = (connected) => {
-      this.log(`📡 Connection status changed: ${connected ? '✅ online' : '⚠️ offline'}`);
-      // Update connection_status capability instead of setAvailable/setUnavailable
+      this.log(`📡 Appliance ${connected ? 'online' : 'offline'} (MQTT event)`);
       this.setCapabilityValue('connection_status', connected ? 'online' : 'offline').catch(this.error);
     };
 
@@ -622,41 +607,33 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     };
 
     // Register handlers
-    this.homey.app.on(applianceStatusEvent, this._applianceStatusHandler);
-    this.homey.app.on(connectionEvent, this._connectionHandler);
+    this.homey.app.on(`mqtt:connection:${macAddress}`, this._connectionHandler);
     this.homey.app.on('mqtt:disconnected', this._disconnectedHandler);
     this.homey.app.on('mqtt:connected', this._connectedHandler);
+    // NOTE: Parameter updates are received via the 'attributesUpdated' event from the
+    // JavahOn library (see _setupLibraryEventListeners), which already filters by MAC
+    // address internally. A separate 'mqtt:update:{mac}' handler here would cause
+    // _updateCapabilitiesFromParams() to be called twice per MQTT message.
 
     this.log('✅ MQTT handlers setup complete');
   }
 
   /**
    * Unregister MQTT event handlers to prevent memory leaks
-   * Removes all listeners for this device's MQTT topics
+   * Removes appliance connection listeners and global MQTT broker listeners
    * @private
    * @returns {void}
    * @example
    * // Clean up MQTT handlers
    * this._unregisterMqttHandlers();
-   * // All event listeners for this device are removed
+   * // All MQTT event listeners are removed
    */
   _unregisterMqttHandlers() {
     const macAddress = this.getStoreValue('macAddress');
-    this.log(`Cleaning up MQTT handlers for MAC: ${macAddress}`);
-
-    if (this._applianceStatusHandler) {
-      this.homey.app.removeListener(
-        `mqtt:appliancestatus:${macAddress}`,
-        this._applianceStatusHandler
-      );
-      this._applianceStatusHandler = null;
-    }
+    this.log('Cleaning up MQTT handlers...');
 
     if (this._connectionHandler) {
-      this.homey.app.removeListener(
-        `mqtt:connection:${macAddress}`,
-        this._connectionHandler
-      );
+      this.homey.app.removeListener(`mqtt:connection:${macAddress}`, this._connectionHandler);
       this._connectionHandler = null;
     }
 
@@ -899,6 +876,21 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
     this.log('Setting up JavahOn library event listeners...');
 
+    // Listen to attributesUpdated event from JavahOn for real-time capability updates
+    this._attributesUpdatedHandler = async (params) => {
+      this.log(`🎯 ATTRIBUTES UPDATED (from JavahOn event) - Updating capabilities`);
+
+      // When MQTT message arrives, device is implicitly online
+      // Update connection status to online if it was offline
+      const currentStatus = this.getCapabilityValue('connection_status');
+      if (currentStatus !== 'online') {
+        this.log('📡 Device online (MQTT message received)');
+        await this.setCapabilityValue('connection_status', 'online').catch(this.error);
+      }
+
+      await this._updateCapabilitiesFromParams(params);
+    };
+
     // Listen to programStarted event from JavahOn
     this._programStartedHandler = async (event) => {
       this.log('🎯 WASH STARTED (from JavahOn event) - Triggering flow');
@@ -974,6 +966,7 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     // Register event handlers on WashingMachine instance
     this._appliance.extra.on('programStarted', this._programStartedHandler);
     this._appliance.extra.on('programFinished', this._programFinishedHandler);
+    this._appliance.extra.on('attributesUpdated', this._attributesUpdatedHandler);
 
     this.log('✅ JavahOn library event listeners setup complete');
   }
@@ -1000,6 +993,11 @@ module.exports = class WashingMachineDevice extends Homey.Device {
     if (this._programFinishedHandler) {
       this._appliance.extra.removeListener('programFinished', this._programFinishedHandler);
       this._programFinishedHandler = null;
+    }
+
+    if (this._attributesUpdatedHandler) {
+      this._appliance.extra.removeListener('attributesUpdated', this._attributesUpdatedHandler);
+      this._attributesUpdatedHandler = null;
     }
 
     this.log('✅ JavahOn library event listeners cleaned up');
@@ -1245,16 +1243,15 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
       if (!mqttClient) {
         // Only subscribe to devices actually added in Homey
-        // Get all Homey devices and their appliances
+        // IMPORTANT: Reuse the existing HonAppliance instances from each device
+        // so that MQTT updates emit events on the SAME objects that devices listen to.
+        // Creating new HonAppliance objects would break the event chain because
+        // each HonAppliance creates its own WashingMachine (.extra) with its own EventEmitter.
         const driver = this.driver;
         const devices = driver.getDevices();
-
-        // Load only the appliances for registered devices
-        const allAppliances = await app.loadAppliances();
-        const registeredMacs = devices.map(d => d.getStoreValue('macAddress'));
-        const honAppliances = allAppliances
-          .filter(info => registeredMacs.includes(info.macAddress))
-          .map(info => new HonAppliance(app.getApi(), info));
+        const honAppliances = devices
+          .filter(d => d._appliance)
+          .map(d => d._appliance);
 
         this.log(`Starting MQTT for ${honAppliances.length} registered device(s)`);
         mqttClient = await app.startMqttClient(honAppliances);
@@ -1360,8 +1357,6 @@ module.exports = class WashingMachineDevice extends Homey.Device {
 
     // Stato interno
     this._appliance = null;
-    this._mqttHandler = null;
-    this._connectionHandler = null;
     this._pollInterval = null;
     this._lastMachMode = null; // Track machMode changes for flow triggers
 

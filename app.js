@@ -16,9 +16,12 @@ module.exports = class HonApp extends Homey.App {
   // ═══════════════════════════════════════════════════════════════════════
 
   /**
-   * Setup MQTT client event handlers for global connection monitoring
+   * Setup MQTT client event handlers for connection monitoring and routing
    * Handles MQTT broker connection status (connected, disconnected, error)
-   * Note: Appliance-specific updates are now handled autonomously by the library
+   * Routes appliance-specific connection events to device listeners
+   * NOTE: Parameter updates are NOT routed here — they are handled exclusively
+   * via the 'attributesUpdated' event emitted by the JavahOn library (wm.js),
+   * which already scopes updates to the correct appliance instance.
    * @private
    * @returns {void}
    * @example
@@ -43,6 +46,17 @@ module.exports = class HonApp extends Homey.App {
       this.error('MQTT error:', error.message);
       this.emit('mqtt:error', error);
     });
+
+    // Handle appliance-specific connection changes
+    // Routes connectionChange events from client to device-specific events
+    this._mqttClient.on('connectionChange', ({ appliance, connected, payload }) => {
+      const macAddress = appliance.macAddress || appliance.info?.macAddress;
+      if (macAddress) {
+        this.log(`📡 Appliance ${macAddress}: ${connected ? 'online' : 'offline'}`);
+        this.emit(`mqtt:connection:${macAddress}`, connected);
+      }
+    });
+
   }
 
   // ═══════════════════════════════════════════════════════════════════════

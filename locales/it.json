@@ -15,7 +15,7 @@
   },
   "program": {
     "unknown": "Sconosciuto",
-    "fallback": "Programma {{code}}"
+    "fallback": "Programma __code__"
   },
   "errors": {
     "device_offline": "La lavatrice è offline. Assicurati che sia accesa e connessa.",
@@ -42,14 +42,14 @@
       "generate_button": "Genera Diagnostica",
       "description": "Scarica un report diagnostico completo di tutti gli elettrodomestici registrati nel tuo account hOn. Questi dati includono comandi, parametri, attributi e statistiche per ogni dispositivo, che possono essere utilizzati per sviluppi futuri (ad esempio, aggiungere il supporto per frigoriferi, lavastoviglie, ecc.).",
       "generating": "Generazione dati di diagnostica...",
-      "failed": "Generazione fallita: {{error}}",
-      "diagnostics_saved_toast": "Diagnostica generata! Trovati {{count}} elettrodomestico/i",
-      "api_error": "Errore API: {{error}}",
+      "failed": "Generazione fallita: __error__",
+      "diagnostics_saved_toast": "Diagnostica generata! Trovati __count__ elettrodomestico/i",
+      "api_error": "Errore API: __error__",
       "available_files": "File Disponibili",
       "download": "Scarica",
       "delete": "Elimina",
-      "confirm_delete": "Sei sicuro di voler eliminare {{filename}}?",
-      "error_deleting": "Errore nell'eliminazione del file: {{error}}",
+      "confirm_delete": "Sei sicuro di voler eliminare __filename__?",
+      "error_deleting": "Errore nell'eliminazione del file: __error__",
       "failed_delete": "Eliminazione file fallita",
       "file_deleted": "File eliminato con successo",
       "settings_saved": "Impostazioni salvate con successo"
