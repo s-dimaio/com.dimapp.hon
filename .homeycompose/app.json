@@ -1,6 +1,6 @@
 {
   "id": "com.dimapp.hon",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "platforms": [
@@ -44,5 +44,16 @@
       "path": "/diagnostic/file/:filename"
     }
   },
-  "brandColor": "#2186b1"
+  "brandColor": "#2186b1",
+  "source": "https://github.com/s-dimaio/com.dimapp.hon",
+  "bugs": {
+    "url": "https://github.com/s-dimaio/com.dimapp.hon/issues"
+  },
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "username": "sdimaio77"
+      }
+    }
+  }
 }
