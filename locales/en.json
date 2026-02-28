@@ -40,7 +40,7 @@
     "diagnostics": {
       "legend": "Diagnostic Data",
       "generate_button": "Generate Diagnostics",
-      "description": "Download a complete diagnostic report of all appliances registered on your hOn account. This data includes commands, parameters, attributes, and statistics for each device, which can be used for future development (e.g., adding support for refrigerators, dishwashers, etc.).",
+      "description": "Download a complete diagnostic report of all appliances registered on your hOn account. This data includes commands, parameters, attributes, and statistics for each device, which can be shared with the developer to support future implementations (e.g., adding support for other appliances such as dryers, refrigerators, dishwashers, etc.).",
       "generating": "Generating diagnostic data...",
       "failed": "Failed to generate: __error__",
       "diagnostics_saved_toast": "Diagnostics generated! Found __count__ appliance(s)",

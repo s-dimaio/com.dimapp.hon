@@ -40,7 +40,7 @@
     "diagnostics": {
       "legend": "Dati di Diagnostica",
       "generate_button": "Genera Diagnostica",
-      "description": "Scarica un report diagnostico completo di tutti gli elettrodomestici registrati nel tuo account hOn. Questi dati includono comandi, parametri, attributi e statistiche per ogni dispositivo, che possono essere utilizzati per sviluppi futuri (ad esempio, aggiungere il supporto per frigoriferi, lavastoviglie, ecc.).",
+      "description": "Scarica un report diagnostico completo di tutti gli elettrodomestici registrati nel tuo account hOn. Questi dati includono comandi, parametri, attributi e statistiche per ogni dispositivo, che possono essere condivisi con lo sviluppatore per supportare future implementazioni (ad esempio, aggiungere il supporto per altri elettrodomestici quali asciugatrici, frigoriferi, lavastoviglie, ecc.).",
       "generating": "Generazione dati di diagnostica...",
       "failed": "Generazione fallita: __error__",
       "diagnostics_saved_toast": "Diagnostica generata! Trovati __count__ elettrodomestico/i",

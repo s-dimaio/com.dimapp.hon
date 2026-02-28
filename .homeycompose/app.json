@@ -1,6 +1,6 @@
 {
   "id": "com.dimapp.hon",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "platforms": [
@@ -10,7 +10,8 @@
     "en": "hOn SmartHome"
   },
   "description": {
-    "en": "Your laundry, smarter than ever"
+    "en": "Your laundry, smarter than ever",
+    "it": "Il tuo bucato, più intelligente che mai"
   },
   "category": [
     "appliances"
