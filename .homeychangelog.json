@@ -1,17 +1,26 @@
 {
   "1.0.0": {
-    "en": "First version!"
+    "en": "First version!",
+    "it": "Prima versione!"
   },
   "1.0.1": {
-    "en": "Fixed issues with retrieving the current wash program"
+    "en": "Fixed issues with retrieving the current wash program",
+    "it": "Risolti problemi nel recupero del programma di lavaggio corrente"
   },
   "1.0.2": {
-    "en": "Fixed issues with retrieving the current wash program"
+    "en": "Fixed issues with retrieving the current wash program",
+    "it": "Risolti problemi nel recupero del programma di lavaggio corrente"
   },
   "1.0.3": {
-    "en": "Fixed issues with retrieving the current wash program"
+    "en": "Fixed issues with retrieving the current wash program",
+    "it": "Risolti problemi nel recupero del programma di lavaggio corrente"
   },
   "1.0.4": {
-    "en": "Fixed issues with retrieving the current wash program"
+    "en": "Fixed issues with retrieving the current wash program",
+    "it": "Risolti problemi nel recupero del programma di lavaggio corrente"
+  },
+  "1.0.5": {
+    "en": "Minor bug fixes",
+    "it": "Piccoli bug fix"
   }
 }

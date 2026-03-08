@@ -16,6 +16,7 @@
 .homeyignore
 *.ps1
 *.bat
+/.agent/
 TODO.txt
 
 # IDE

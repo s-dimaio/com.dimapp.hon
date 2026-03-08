@@ -71,11 +71,13 @@
             <span class="homey-form-checkbox-text" data-i18n="settings.debug.enable_debug"></span>
           </label>
         </fieldset>
-        <p style="margin-top: 8px; font-size: 14px; color: #666; line-height: 1.5;" data-i18n="settings.debug.debug_description"></p>
+        <p style="margin-top: 8px; font-size: 14px; color: #666; line-height: 1.5;"
+          data-i18n="settings.debug.debug_description"></p>
 
         <div
           style="margin-top: 16px; padding: 16px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">
-          <p style="margin: 0; font-size: 14px; color: #856404; line-height: 1.5;" data-i18n="settings.debug.restart_note"></p>
+          <p style="margin: 0; font-size: 14px; color: #856404; line-height: 1.5;"
+            data-i18n="settings.debug.restart_note"></p>
         </div>
       </div>
 
@@ -85,16 +87,21 @@
       <legend class="homey-form-legend" data-i18n="settings.diagnostics.legend"></legend>
 
       <div class="homey-form-group">
-        <p style="margin-bottom: 16px; font-size: 14px; color: #666; line-height: 1.5;" data-i18n="settings.diagnostics.description"></p>
+        <p style="margin-bottom: 16px; font-size: 14px; color: #666; line-height: 1.5;"
+          data-i18n="settings.diagnostics.description"></p>
 
         <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; justify-content: center;">
-          <button type="button" id="generate-diagnostics" class="homey-button-secondary-shadow" data-i18n="settings.diagnostics.generate_button"></button>
+          <button type="button" id="generate-diagnostics" class="homey-button-secondary-shadow"
+            data-i18n="settings.diagnostics.generate_button"></button>
         </div>
 
         <!-- Diagnostic files list -->
         <div id="diagnostics-files" style="margin-top: 16px; display: none;">
-          <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;" data-i18n="settings.diagnostics.available_files"></h3>
-          <div id="files-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 12px;"></div>
+          <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;"
+            data-i18n="settings.diagnostics.available_files"></h3>
+          <div id="files-list"
+            style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 12px;">
+          </div>
         </div>
       </div>
     </fieldset>
@@ -187,10 +194,10 @@
       function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         toast.textContent = message;
-        
+
         // Remove existing type classes
         toast.classList.remove('success', 'error', 'warning');
-        
+
         // Add appropriate type class
         toast.classList.add(type);
         toast.classList.add('show');
@@ -202,7 +209,7 @@
 
       // Function to load and display files list
       function loadFilesList() {
-        Homey.api('GET', '/diagnostic/files', null, function(err, result) {
+        Homey.api('GET', '/diagnostic/files', null, function (err, result) {
           if (err) {
             console.error('Failed to load files:', err);
             return;
@@ -210,14 +217,14 @@
 
           if (result.success && result.files && result.files.length > 0) {
             diagnosticsFilesDiv.style.display = 'block';
-            
+
             let html = '';
-            result.files.forEach(function(file, index) {
+            result.files.forEach(function (file, index) {
               const date = new Date(file.created).toLocaleString();
               const sizeKB = (file.size / 1024).toFixed(2);
               const isLast = index === result.files.length - 1;
               const borderStyle = isLast ? '' : 'border-bottom: 1px solid #eee;';
-              
+
               html += '<div class="diagnostic-file-item" data-filename="' + file.filename + '" style="padding: 8px; ' + borderStyle + ' display: flex; justify-content: space-between; align-items: center;">';
               html += '  <div>';
               html += '    <div style="font-weight: 500;">' + file.filename + '</div>';
@@ -229,12 +236,12 @@
               html += '  </div>';
               html += '</div>';
             });
-            
+
             filesList.innerHTML = html;
-            
+
             // Apply translations to dynamically created elements
             const dynamicElements = filesList.querySelectorAll('[data-i18n]');
-            dynamicElements.forEach(function(el) {
+            dynamicElements.forEach(function (el) {
               const key = el.getAttribute('data-i18n');
               el.textContent = Homey.__(key);
             });
@@ -246,29 +253,29 @@
 
       // Function to delete a file
       function deleteFile(filename, button) {
-        const confirmMsg = Homey.__('settings.diagnostics.confirm_delete').replace('{{filename}}', filename);
-        Homey.confirm(confirmMsg, 'warning', function(err, confirmed) {
+        const confirmMsg = Homey.__('settings.diagnostics.confirm_delete', { filename: filename });
+        Homey.confirm(confirmMsg, 'warning', function (err, confirmed) {
           if (err) return;
           if (!confirmed) return;
-          
+
           button.disabled = true;
-          
-          Homey.api('DELETE', '/diagnostic/file/' + encodeURIComponent(filename), null, function(err, result) {
+
+          Homey.api('DELETE', '/diagnostic/file/' + encodeURIComponent(filename), null, function (err, result) {
             button.disabled = false;
-            
+
             if (err) {
-              showToast(Homey.__('settings.diagnostics.error_deleting').replace('{{error}}', err), 'error');
+              showToast(Homey.__('settings.diagnostics.error_deleting', { error: err }), 'error');
               return;
             }
-            
+
             if (!result.success) {
               showToast(result.error || Homey.__('settings.diagnostics.failed_delete'), 'error');
               return;
             }
-            
+
             // Refresh list after delete
             loadFilesList();
-            
+
             // Show confirmation
             showToast(Homey.__('settings.diagnostics.file_deleted'), 'success');
           });
@@ -276,28 +283,28 @@
       }
 
       // Generate diagnostics button
-      generateButton.addEventListener('click', function() {
+      generateButton.addEventListener('click', function () {
         // Disable button with Homey best practice class
         generateButton.disabled = true;
         generateButton.classList.add('is-disabled');
         showToast(Homey.__('settings.diagnostics.generating'), 'warning');
-        
-        Homey.api('GET', '/diagnostics', null, function(err, result) {
+
+        Homey.api('GET', '/diagnostics', null, function (err, result) {
           // Re-enable button
           generateButton.disabled = false;
           generateButton.classList.remove('is-disabled');
-          
+
           if (err) {
-            showToast(Homey.__('settings.diagnostics.failed').replace('{{error}}', err.message), 'error');
+            showToast(Homey.__('settings.diagnostics.failed', { error: err.message }), 'error');
             return;
           }
 
           if (result.success) {
             const count = result.data?.applianceCount || 0;
-            showToast(Homey.__('settings.diagnostics.diagnostics_saved_toast').replace('{{count}}', count), 'success');
+            showToast(Homey.__('settings.diagnostics.diagnostics_saved_toast', { count: count }), 'success');
             loadFilesList();
           } else {
-            showToast(Homey.__('settings.diagnostics.api_error').replace('{{error}}', result.error), 'error');
+            showToast(Homey.__('settings.diagnostics.api_error', { error: result.error }), 'error');
             loadFilesList();
           }
         });
@@ -305,12 +312,12 @@
 
       // Load files list on page load
       loadFilesList();
-      
+
       // Event delegation for file actions
-      filesList.addEventListener('click', function(e) {
+      filesList.addEventListener('click', function (e) {
         const downloadBtn = e.target.closest('.download-file');
         const deleteBtn = e.target.closest('.delete-file');
-        
+
         if (downloadBtn) {
           const url = downloadBtn.getAttribute('data-url');
           Homey.openURL(url);

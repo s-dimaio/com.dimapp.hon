@@ -1,6 +1,6 @@
 {
   "name": "com.dimapp.hon",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "GPL-3.0-only",
   "main": "app.js",
   "scripts": {},
@@ -8,6 +8,6 @@
     "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.12"
   },
   "dependencies": {
-    "java-hon": "git+https://github.com/s-dimaio/JavahOn.git#v1.6.15"
+    "java-hon": "git+https://github.com/s-dimaio/JavahOn.git#v1.6.16"
   }
 }
