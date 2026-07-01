@@ -35,6 +35,7 @@ module.exports = class WashingMachineDriver extends Homey.Driver {
       }
     }
 
+
     // Handler to automatically skip login view when already authenticated
     session.setHandler('showView', async (viewId) => {
       this.log(`View changed to: ${viewId}`);
@@ -73,13 +74,28 @@ module.exports = class WashingMachineDriver extends Homey.Driver {
         }
 
         // Load appliances
+        this.log('🔍 list_devices - Loading appliances from API...');
         const appliancesList = await app.loadAppliances();
-        
+        this.log(`🔍 list_devices - Total appliances from API: ${appliancesList.length}`);
+
+        // Log all appliances before filtering to help diagnose type mismatches
+        appliancesList.forEach((appliance, i) => {
+          const type = appliance.applianceTypeName || appliance.applianceType || '?';
+          const name = appliance.nickName || appliance.modelName || '?';
+          const mac = appliance.macAddress || appliance.serialNumber || '?';
+          this.log(`🔍   [${i}] type="${type}" | name="${name}" | mac="${mac}"`);
+        });
+
         // Filter only washing machines (WM = Washing Machine)
         const washingMachines = appliancesList.filter(appliance => {
           const type = appliance.applianceTypeName || appliance.applianceType || '';
           return type.toUpperCase() === 'WM';
         });
+
+        this.log(`🔍 list_devices - Washing machines after filter (type=WM): ${washingMachines.length}`);
+        if (appliancesList.length > 0 && washingMachines.length === 0) {
+          this.error('⚠️  list_devices - No WM devices found. Check the types above — they may have changed or the account may list no devices.');
+        }
 
         // Map to Homey format
         const devices = washingMachines.map(appliance => {
@@ -107,12 +123,14 @@ module.exports = class WashingMachineDriver extends Homey.Driver {
           };
         });
 
+        this.log(`🔍 list_devices - Returning ${devices.length} device(s) to Homey pairing UI`);
         return devices;
       } catch (error) {
         this.error('Failed to list devices:', error.message);
         throw new Error(this.homey.__('pair.list_failed') || `Failed to list devices: ${error.message}`);
       }
     });
+
 
     // Disconnect handler
     session.setHandler('disconnect', async () => {

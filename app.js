@@ -75,11 +75,15 @@ module.exports = class HonApp extends Homey.App {
    * }
    */
   async _tryRestoreSession() {
+    this.log('🔑 _tryRestoreSession() - Checking for saved tokens...');
     const savedTokens = this.homey.settings.get('honTokens');
 
     if (!savedTokens) {
+      this.log('🔑 _tryRestoreSession() - No saved tokens found, full login required');
       return false;
     }
+
+    this.log(`🔑 _tryRestoreSession() - Found saved tokens (expiresAt: ${savedTokens.expiresAt || 'unknown'})`);
 
     try {
 
@@ -97,24 +101,41 @@ module.exports = class HonApp extends Homey.App {
       this._registerTokenHandler();
 
       // Try to use saved tokens
+      this.log('🔑 _tryRestoreSession() - Attempting setTokens()...');
       if (this._auth.setTokens(savedTokens)) {
+        this.log('🔑 _tryRestoreSession() - setTokens() succeeded, session restored');
         this._api = new HonAPI(this._auth);
         return true;
       } else {
+        this.log('🔑 _tryRestoreSession() - setTokens() failed (tokens likely expired), attempting refresh...');
         // Try to refresh tokens
         if (savedTokens.refreshToken) {
-          const refreshed = await this._auth.refresh(savedTokens.refreshToken);
-          if (refreshed) {
-            this._api = new HonAPI(this._auth);
-            return true;
+          try {
+            const refreshed = await this._auth.refresh(savedTokens.refreshToken);
+            if (refreshed) {
+              this.log('🔑 _tryRestoreSession() - Token refresh succeeded');
+              this._api = new HonAPI(this._auth);
+              return true;
+            } else {
+              this.log('🔑 _tryRestoreSession() - Token refresh returned false, full login required');
+            }
+          } catch (refreshError) {
+            this.error(`🔑 _tryRestoreSession() - Token refresh failed: ${refreshError.message}`);
           }
+        } else {
+          this.log('🔑 _tryRestoreSession() - No refreshToken available, full login required');
         }
       }
     } catch (error) {
       this.error('Failed to restore session:', error.message);
+      if (error.response) {
+        this.error(`  HTTP ${error.response.status} - ${error.response.config?.url || ''}`);
+        this.error(`  Response: ${JSON.stringify(error.response.data).substring(0, 300)}`);
+      }
     }
 
     // Clean up if restore fails
+    this.log('🔑 _tryRestoreSession() - Session restore failed, cleaning up');
     this._auth = null;
     this._api = null;
     return false;
@@ -351,11 +372,25 @@ module.exports = class HonApp extends Homey.App {
     }
 
     try {
+      this.log('📋 loadAppliances() - Calling API...');
       this._appliances = await this._api.loadAppliances();
-      this.log(`Loaded ${this._appliances.length} appliances`);
+      this.log(`📋 loadAppliances() - Loaded ${this._appliances.length} appliance(s)`);
+
+      if (this._appliances.length === 0) {
+        this.error('⚠️  loadAppliances() - The API returned 0 appliances. Check the debug logs above for the raw API response.');
+      } else {
+        this._appliances.forEach((a, i) => {
+          this.log(`📋   [${i}] type=${a.applianceTypeName || a.applianceType || '?'} | name=${a.nickName || a.modelName || '?'} | mac=${a.macAddress || a.serialNumber || '?'}`);
+        });
+      }
+
       return this._appliances;
     } catch (error) {
       this.error('Failed to load appliances:', error.message);
+      if (error.response) {
+        this.error(`  HTTP ${error.response.status} - ${error.response.config?.url || ''}`);
+        this.error(`  Response: ${JSON.stringify(error.response.data).substring(0, 300)}`);
+      }
       throw error;
     }
   }

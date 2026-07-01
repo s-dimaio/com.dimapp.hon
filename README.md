@@ -98,6 +98,20 @@ THEN: Pause wash cycle
 - [JavahOn](https://github.com/s-dimaio/JavahOn) - Node.js library for hOn API communication
 - Homey SDK v3 - Athom's official development framework
 
+## Local Development
+
+For developers who want to modify and test changes to the `java-hon` dependency library locally alongside the Homey app, two startup scripts are provided in `package.json`:
+
+### 1. `npm run run:local` (Local Development)
+This script is used for debugging with a local copy of the `JavahOn` library:
+* It synchronizes the files from your local `JavahOn` workspace directly to `node_modules/java-hon/` before running the Homey app.
+* **Setup**: Open [dev-scripts/sync-local-lib.js](file:///d:/Workspace/Homey/com.dimapp.hon/dev-scripts/sync-local-lib.js) and update the `LOCAL_LIB_SRC` constant to point to the absolute path of your local `JavahOn` workspace (e.g. `'D:\\Workspace\\VSCode\\JavahOn'`).
+* **Fallback**: If the folder is not found or not configured, the script will show a red error and block execution (preventing the Homey app from running) to remind you to set the path.
+
+### 2. `npm run run:github` (Standard Execution)
+This script runs the Homey app using the official library version specified in `package.json` (pointing to the GitHub repository):
+* It performs a fresh `npm install` to ensure the GitHub version is used and then runs the app.
+
 ## Troubleshooting
 
 ### Device Won't Pair

@@ -21,6 +21,10 @@
   },
   "1.0.5": {
     "en": "Minor bug fixes",
-    "it": "Piccoli bug fix"
+    "it": "Bug fix minori"
+  },
+  "1.0.6": {
+    "en": "Fixed authentication and device discovery issues where devices were not loaded from the hOn account",
+    "it": "Risolti problemi di autenticazione e di scoperta dei dispositivi per cui gli elettrodomestici non venivano caricati dall'account hOn"
   }
 }

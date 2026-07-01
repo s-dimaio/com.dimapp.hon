@@ -1,13 +1,16 @@
 {
   "name": "com.dimapp.hon",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "license": "GPL-3.0-only",
   "main": "app.js",
-  "scripts": {},
+  "scripts": {
+    "run:local": "node dev-scripts/sync-local-lib.js && homey app run --r",
+    "run:github": "npm install && homey app run --r"
+  },
   "devDependencies": {
     "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.12"
   },
   "dependencies": {
-    "java-hon": "git+https://github.com/s-dimaio/JavahOn.git#v1.6.16"
+    "java-hon": "git+https://github.com/s-dimaio/JavahOn.git#v1.6.17"
   }
 }
