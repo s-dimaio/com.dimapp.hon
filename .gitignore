@@ -11,7 +11,7 @@
 
 # Development
 **/bck/
-/dev-scripts/
+/dev-scripts/*
 !/dev-scripts/sync-local-lib.js
 /log/
 .homeyignore
